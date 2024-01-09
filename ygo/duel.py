@@ -446,6 +446,15 @@ class Duel(Joinable):
 		for n in all_methods.keys():
 			setattr(self, n, all_methods[n].__get__(self))
 
+	def get_usable(self, pl):
+		summonable = natsort.natsorted([card.get_spec(pl) for card in self.summonable])
+		spsummon = natsort.natsorted([card.get_spec(pl) for card in self.spsummon])
+		repos = natsort.natsorted([card.get_spec(pl) for card in self.repos])
+		mset = natsort.natsorted([card.get_spec(pl) for card in self.idle_mset])
+		idle_set = natsort.natsorted([card.get_spec(pl) for card in self.idle_set])
+		idle_activate = natsort.natsorted([card.get_spec(pl) for card in self.idle_activate])
+		return list(set(summonable + spsummon + repos + mset + idle_set + idle_activate))
+
 	def show_usable(self, pl):
 		summonable = natsort.natsorted([card.get_spec(pl) for card in self.summonable])
 		spsummon = natsort.natsorted([card.get_spec(pl) for card in self.spsummon])

@@ -44,7 +44,7 @@ def select_place(self, player, count, flag):
 			resp += bytes([plr, l, s])
 		self.set_responseb(resp)
 		reactor.callLater(0, process_duel, self)
-	pl.notify(DuelReader, r, no_abort=pl._("Invalid command"), restore_parser=DuelParser)
+	pl.notify(DuelReader, r, specs, no_abort=pl._("Invalid command"), restore_parser=DuelParser)
 
 MESSAGES = {18: msg_select_place, 24: msg_select_place}
 

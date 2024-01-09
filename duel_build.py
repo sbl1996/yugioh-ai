@@ -85,7 +85,7 @@ extern "Python" uint32 card_reader_callback(uint32, struct card_data *);
 typedef uint32 (*card_reader)(uint32, struct card_data*);
 void set_card_reader(card_reader f);
 typedef byte* (*script_reader)(const char*, int*);
-typedef uint32 (*message_handler)(void*, uint32);
+typedef uint32 (*message_handler)(intptr_t, uint32);
 extern "Python" uint32 message_handler_callback (void *, int32);
 void set_message_handler(message_handler f);
 extern "Python" byte *script_reader_callback(const char *, int *);

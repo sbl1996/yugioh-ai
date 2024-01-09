@@ -50,6 +50,7 @@ def select_chain(self, player, size, spe_count, forced, chains):
 		specs[cs] = card
 		card.chain_spec = cs
 		card.effect_description = card.get_effect_description(pl, desc, True)
+
 	def prompt():
 		if forced:
 			pl.notify(pl._("Select chain:"))
@@ -64,8 +65,16 @@ def select_chain(self, player, size, spe_count, forced, chains):
 			prompt = pl._("Select card to chain:")
 		else:
 			prompt = pl._("Select card to chain (c = cancel):")
-		pl.notify(DuelReader, r, no_abort=pl._("Invalid command."),
-		prompt=prompt, restore_parser=DuelParser)
+		print(specs)
+		pl.notify(
+			DuelReader,
+			r,
+			list(specs.keys()),
+			no_abort=pl._("Invalid command."),
+			prompt=prompt,
+			restore_parser=DuelParser,
+		)
+
 	def r(caller):
 		if caller.text == 'c' and not forced:
 			self.set_responsei(-1)

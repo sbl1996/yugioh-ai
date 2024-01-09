@@ -1,3 +1,5 @@
+deck/
+*.log
 *.o
 *.so
 *.pyc
