@@ -65,11 +65,17 @@ def select_chain(self, player, size, spe_count, forced, chains):
 			prompt = pl._("Select card to chain:")
 		else:
 			prompt = pl._("Select card to chain (c = cancel):")
-		print(specs)
+
+		options = []
+		if not forced:
+			options.append('c')
+		for spec in specs:
+			options.append(spec)
+
 		pl.notify(
 			DuelReader,
 			r,
-			list(specs.keys()),
+			options,
 			no_abort=pl._("Invalid command."),
 			prompt=prompt,
 			restore_parser=DuelParser,

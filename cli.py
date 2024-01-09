@@ -3,6 +3,7 @@ import random
 import sqlite3
 import argparse
 import re
+from collections import defaultdict
 from _duel import ffi, lib
 
 try:
@@ -18,6 +19,7 @@ from ygo.language_handler import LanguageHandler
 from ygo.duel_reader import DuelReader
 from ygo.duel_menu import DuelMenu
 from ygo.parsers.yes_or_no_parser import yes_or_no_parser
+from ygo.constants import LOCATION
 
 
 class Connection:
@@ -73,27 +75,60 @@ class FakePlayer:
 
 
 class RandomAI(FakePlayer):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.statistic = defaultdict(int)
+
     def notify(self, arg1, *args, **kwargs):
-        if arg1 == DuelReader:
-            func, options = args[0], args[1]
-            chosen = random.choice(options)
-            print(func)
-            print(self.duel_player, "chose", chosen, "in", options)
-            caller = Response(chosen, self)
-            func(caller)
-        elif isinstance(arg1, DuelMenu):
-            print(arg1)
-            chosen = random.choice([ str(x + 1) for x in range(len(arg1.items))])
-            caller = Response(chosen, self)
-            print(caller.text)
-            arg1.huh(caller)
-        elif arg1 == yes_or_no_parser:
-            print("yes no parser")
-            print(args, kwargs)
-            opt, yes = args[0], args[1]
-            chosen = random.choice(["y", "n"])
-            caller = Response(chosen, self)
-            yes_or_no_parser(opt, yes, **kwargs).huh(caller)
+        should_decide = arg1 == DuelReader or isinstance(arg1, DuelMenu) or arg1 == yes_or_no_parser
+        if should_decide:
+            if arg1 == DuelReader:
+                func, options = args[0], args[1]
+
+                msg = re.search(r'<function (\w+)\.<locals>\.', str(func)).group(1)
+                self.statistic[msg] += 1
+                if msg == 'handle_error':
+                    msg = "select_sum"
+                print(msg)
+                    # chosen = input()
+                chosen = random.choice(options)
+                print(self.duel_player, "chose", chosen, "in", options)
+                caller = Response(chosen, self)
+                func(caller)
+
+            elif isinstance(arg1, DuelMenu):
+                title = arg1.title
+                if title.startswith("Select option"):
+                    msg = "select_option"
+                elif title.startswith("Select position"):
+                    msg = "select_position"
+                else:
+                    raise ValueError("DuelMenu with unknown title: ", title)
+                self.statistic[msg] += 1
+                print(msg)
+
+                options = [ str(x + 1) for x in range(len(arg1.items))]
+                chosen = random.choice(options)
+                print(self.duel_player, "chose", chosen, "in", options)
+                caller = Response(chosen, self)
+                arg1.huh(caller)
+
+            elif arg1 == yes_or_no_parser:
+                opt, yes = args[0], args[1]
+
+                if "effect" in opt:
+                    msg = "select_effectyn"
+                else:
+                    msg = "yesno"
+                self.statistic[msg] += 1
+                print(msg)
+
+                options = ["y", "n"]
+                chosen = random.choice(options)
+                print(self.duel_player, "chose", chosen, "in", options)
+                caller = Response(chosen, self)
+                yes_or_no_parser(opt, yes, **kwargs).huh(caller)
         else:
             print(self.duel_player, arg1)
 
@@ -111,6 +146,23 @@ def load_deck(fn):
         noside = itertools.takewhile(lambda x: "side" not in x, lines)
         deck = [int(line) for line in  noside if line[:-1].isdigit()]
         return deck
+
+global g_duel
+
+def show_duel(duel):
+    players = (0, 1)
+    cards = []
+    for i in players:
+        for j in (
+            LOCATION.HAND,
+            LOCATION.MZONE,
+            LOCATION.SZONE,
+            LOCATION.GRAVE,
+            LOCATION.EXTRA,
+        ):
+            cards.extend(duel.get_cards_in_location(i, j))
+    specs = set(card.get_spec(duel.players[duel.tp]) for card in cards)
+
 
 def main():
     player_factory = {
@@ -145,6 +197,8 @@ def main():
     glb.server.db.row_factory = sqlite3.Row
 
     duel = dm.Duel()
+    global g_duel
+    g_duel = duel
     duel.room = FakeRoom()
     config = {"players": ["Alice", "Bob"], "decks": decks}
     players = [player_factory[args.p1](0, config["decks"][0], lang), player_factory[args.p2](1, config["decks"][1], lang)]
@@ -167,6 +221,8 @@ def main():
     duel.start(((rules & 0xFF) << 16) + (options & 0xFFFF))
     process_duel(duel)
     print(duel.lp)
+    print(players[0].statistic)
+    print(players[1].statistic)
 
 
 if __name__ == "__main__":
