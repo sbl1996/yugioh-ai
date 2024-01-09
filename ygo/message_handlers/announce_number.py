@@ -19,7 +19,7 @@ def announce_number(self, player, opts):
 	def prompt():
 		pl.notify(pl._("Select a number, one of: {opts}")
 			.format(opts=", ".join(str_opts)))
-		return pl.notify(DuelReader, r, no_abort=pl._("Invalid command."), restore_parser=DuelParser)
+		return pl.notify(DuelReader, r, str_opts, no_abort=pl._("Invalid command."), restore_parser=DuelParser)
 	def r(caller):
 		ints = parse_ints(caller.text)
 		if not ints or ints[0] not in opts:

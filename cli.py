@@ -47,11 +47,11 @@ class FakeRoom:
 
 
 class FakePlayer:
-    def __init__(self, i, deck):
+    def __init__(self, i, deck, language):
         self.deck = {"cards": deck}
         self.duel_player = i
         self.cdb = glb.server.db
-        self.language = "english"
+        self.language = language
         self.watching = False
         self.seen_waiting = False
         self.soundpack = False
@@ -115,7 +115,11 @@ def load_deck(fn):
 def main():
     player_factory = {
         'manual': FakePlayer,
-        'random':RandomAI
+        'random': RandomAI
+    }
+    lang_short = {
+        'english': 'en',
+        'chinese': 'zh'
     }
     parser = argparse.ArgumentParser()
     parser.add_argument("--deck1", help="deck for player 1", type=str, required=True)
@@ -125,21 +129,25 @@ def main():
     parser.add_argument("--p1", help="type of player 1", type=str, default='random', choices=player_factory.keys())
     parser.add_argument("--p2", help="type of player 1", type=str, default='random', choices=player_factory.keys())
     parser.add_argument("--preload", help="path to preload script", type=str, default=None)
+    parser.add_argument("--lang", help="language", type=str, default="english")
     args = parser.parse_args()
 
     decks = [load_deck(args.deck1), load_deck(args.deck2)]
 
+    lang = args.lang
+    short = lang_short[lang]
+
     glb.language_handler = LanguageHandler()
-    glb.language_handler.add("english", "en")
-    glb.language_handler.set_primary_language("english")
+    glb.language_handler.add(lang, short)
+    glb.language_handler.set_primary_language(lang)
     glb.server = server.Server()
-    glb.server.db = sqlite3.connect("locale/en/cards.cdb")
+    glb.server.db = sqlite3.connect(f"locale/{short}/cards.cdb")
     glb.server.db.row_factory = sqlite3.Row
 
     duel = dm.Duel()
     duel.room = FakeRoom()
     config = {"players": ["Alice", "Bob"], "decks": decks}
-    players = [player_factory[args.p1](0, config["decks"][0]), player_factory[args.p2](1, config["decks"][1])]
+    players = [player_factory[args.p1](0, config["decks"][0], lang), player_factory[args.p2](1, config["decks"][1], lang)]
     for i, name in enumerate(config["players"]):
         players[i].nickname = name
         duel.load_deck(players[i])

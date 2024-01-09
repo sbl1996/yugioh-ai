@@ -23,7 +23,7 @@ def msg_select_sum(self, data):
 		card.location = LOCATION(self.read_u8(data))
 		card.sequence = self.read_u8(data)
 		param = self.read_u32(data)
-		card.param = (param&0xff, param>>16, )
+		card.param = (param & 0xff, param >> 16)
 		must_select.append(card)
 	count = self.read_u8(data)
 	select_some = []
@@ -56,7 +56,6 @@ def select_sum(self, mode, player, val, select_min, select_max, must_select, sel
 				for l in c.param:
 					for l2 in c2.param:
 						must_select_levels.append(l + l2)
-
 	else:
 		must_select_levels = [0]
 
