@@ -11,7 +11,7 @@ int32 is_declarable(card_data const& cd, const std::vector<uint32>& opcode);
 int32 declarable(card_data *cd, int32 size, uint32 *array) {
 	std::vector<uint32> v;
 	for (int i=0; i < size; i++) {
-	v.push_back(array[i]);
+		v.push_back(array[i]);
 	}
 	return is_declarable(*cd, v);
 }

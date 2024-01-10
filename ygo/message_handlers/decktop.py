@@ -33,7 +33,7 @@ def msg_decktop(self, data):
 
 def decktop(self, player, card):
 	player = self.players[player]
-	for pl in self.players+self.watchers:
+	for pl in self.players:
 		if pl is player:
 			pl.notify(pl._("you reveal your top deck card to be %s")%(card.get_name(pl)))
 		else:
@@ -41,7 +41,7 @@ def decktop(self, player, card):
 
 def confirm_decktop(self, player, cards):
 	player = self.players[player]
-	for pl in self.players+self.watchers:
+	for pl in self.players:
 		if pl is player:
 			pl.notify(pl._("you reveal the following cards from your deck:"))
 		else:

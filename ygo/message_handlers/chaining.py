@@ -34,14 +34,6 @@ def chaining(self, card, tc, tl, ts, desc, cs):
 
 	self.players[c].notify(self.players[c]._("Activating {0} ({1})").format(card.get_spec(self.players[c]), card.get_name(self.players[c])))
 	self.players[o].notify(self.players[o]._("{0} activating {1} ({2})").format(n, card.get_spec(self.players[o]), card.get_name(self.players[o])))
-	for pl in self.watchers:
-		if card.type & TYPE.SPELL:
-			if pl.soundpack:
-				pl.notify("### activate_spell")
-		if card.type & TYPE.TRAP:
-			if pl.soundpack:
-				pl.notify("### activate_trap")
-		pl.notify(pl._("{0} activating {1} ({2})").format(n, card.get_spec(pl), card.get_name(pl)))
 
 MESSAGES = {70: msg_chaining}
 

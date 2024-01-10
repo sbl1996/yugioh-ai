@@ -1,39 +1,39 @@
 import io
-from twisted.internet import reactor
 
 from ygo.card import Card
+from ygo.duel import Duel
 from ygo.duel_reader import DuelReader
-from ygo.parsers.duel_parser import DuelParser
-from ygo.utils import process_duel
 
-def msg_select_chain(self, data):
+
+def msg_select_chain(duel: Duel, data):
 	data = io.BytesIO(data[1:])
-	player = self.read_u8(data)
-	size = self.read_u8(data)
-	spe_count = self.read_u8(data)
-	forced = self.read_u8(data)
-	hint_timing = self.read_u32(data)
-	other_timing = self.read_u32(data)
+	player = duel.read_u8(data)
+	size = duel.read_u8(data)
+	spe_count = duel.read_u8(data)
+	forced = duel.read_u8(data)
+	hint_timing = duel.read_u32(data)
+	other_timing = duel.read_u32(data)
 	chains = []
 	for i in range(size):
-		et = self.read_u8(data)
-		code = self.read_u32(data)
-		loc = self.read_u32(data)
+		et = duel.read_u8(data)
+		code = duel.read_u32(data)
+		loc = duel.read_u32(data)
 		card = Card(code)
 		card.set_location(loc)
-		desc = self.read_u32(data)
+		desc = duel.read_u32(data)
 		chains.append((et, card, desc))
-	self.cm.call_callbacks('select_chain', player, size, spe_count, forced, chains)
+	duel.cm.call_callbacks('select_chain', player, size, spe_count, forced, chains)
 	return data.read()
 
-def select_chain(self, player, size, spe_count, forced, chains):
+
+def select_chain(duel: Duel, player, size, spe_count, forced, chains):
 	if size == 0 and spe_count == 0:
-		self.keep_processing = True
-		self.set_responsei(-1)
+		duel.keep_processing = True
+		duel.set_responsei(-1)
 		return
-	pl = self.players[player]
-	self.chaining_player = player
-	op = self.players[1 - player]
+	pl = duel.players[player]
+	duel.chaining_player = player
+	op = duel.players[1 - player]
 	if not op.seen_waiting:
 		op.notify(op._("Waiting for opponent."))
 		op.seen_waiting = True
@@ -61,10 +61,10 @@ def select_chain(self, player, size, spe_count, forced, chains):
 				pl.notify("%s: %s" % (card.chain_spec, card.get_name(pl)))
 			else:
 				pl.notify("%s (%s): %s"%(card.chain_spec, card.get_name(pl), card.effect_description))
-		if forced:
-			prompt = pl._("Select card to chain:")
-		else:
-			prompt = pl._("Select card to chain (c = cancel):")
+		# if forced:
+		# 	prompt = pl._("Select card to chain:")
+		# else:
+		# 	prompt = pl._("Select card to chain (c = cancel):")
 
 		options = []
 		if not forced:
@@ -76,15 +76,11 @@ def select_chain(self, player, size, spe_count, forced, chains):
 			DuelReader,
 			r,
 			options,
-			no_abort=pl._("Invalid command."),
-			prompt=prompt,
-			restore_parser=DuelParser,
 		)
 
 	def r(caller):
 		if caller.text == 'c' and not forced:
-			self.set_responsei(-1)
-			reactor.callLater(0, process_duel, self)
+			duel.set_responsei(-1)
 			return
 		if caller.text.startswith('i'):
 			info = True
@@ -97,10 +93,9 @@ def select_chain(self, player, size, spe_count, forced, chains):
 		card = specs[caller.text]
 		idx = card.chain_index
 		if info:
-			self.show_info(card, pl)
+			duel.show_info(card, pl)
 			return prompt()
-		self.set_responsei(idx)
-		reactor.callLater(0, process_duel, self)
+		duel.set_responsei(idx)
 	prompt()
 
 MESSAGES = {16: msg_select_chain}

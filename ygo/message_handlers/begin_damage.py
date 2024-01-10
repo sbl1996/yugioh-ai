@@ -3,7 +3,7 @@ def msg_begin_damage(self, data):
 	return data[1:]
 
 def begin_damage(self):
-	for pl in self.players + self.watchers:
+	for pl in self.players:
 		pl.notify(pl._("begin damage"))
 
 MESSAGES = {113: msg_begin_damage}

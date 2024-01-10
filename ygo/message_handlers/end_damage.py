@@ -3,7 +3,7 @@ def msg_end_damage(self, data):
 	return data[1:]
 
 def end_damage(self):
-	for pl in self.players + self.watchers:
+	for pl in self.players:
 		pl.notify(pl._("end damage"))
 
 MESSAGES = {114: msg_end_damage}

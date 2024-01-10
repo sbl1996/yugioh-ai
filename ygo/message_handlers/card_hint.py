@@ -15,11 +15,11 @@ def msg_card_hint(self, data):
 
 def card_hint(self, card, type, value):
 	if type == 3: # race announcement
-		for pl in self.players+self.watchers:
+		for pl in self.players:
 			races = [pl.strings['system'][1020+i] for i in range(AMOUNT_RACES) if value & (1<<i)]
 			pl.notify(pl._("{spec} ({name}) selected {value}.").format(spec=card.get_spec(pl), name=card.get_name(pl), value=', '.join(races)))
 	elif type == 4: # attribute announcement
-		for pl in self.players+self.watchers:
+		for pl in self.players:
 			attributes = [pl.strings['system'][1010+i] for i in range(AMOUNT_ATTRIBUTES) if value & (1<<i)]
 			pl.notify(pl._("{spec} ({name}) selected {value}.").format(spec=card.get_spec(pl), name=card.get_name(pl), value=', '.join(attributes)))
 

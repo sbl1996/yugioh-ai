@@ -12,7 +12,7 @@ def msg_equip(self, data):
 	return data.read()
 
 def equip(self, card, target):
-	for pl in self.players + self.watchers:
+	for pl in self.players:
 		c = self.cardlist_info_for_player(card, pl)
 		t = self.cardlist_info_for_player(target, pl)
 		pl.notify(pl._("{card} equipped to {target}.")

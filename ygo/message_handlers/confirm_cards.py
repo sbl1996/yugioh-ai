@@ -20,7 +20,7 @@ def msg_confirm_cards(self, data):
 def confirm_cards(self, player, cards):
 	player = self.players[cards[0].controller]
 	op = self.players[1 - cards[0].controller]
-	players = [op] + self.watchers
+	players = [op]
 	for pl in players:
 		pl.notify(pl._("{player} shows you {count} cards.")
 			.format(player=player.nickname, count=len(cards)))

@@ -1,9 +1,5 @@
-from twisted.internet import reactor
-
 from ygo.constants import *
 from ygo.duel_reader import DuelReader
-from ygo.parsers.duel_parser import DuelParser
-from ygo.utils import process_duel
 
 
 def idle_action(self, pl):
@@ -27,9 +23,6 @@ def idle_action(self, pl):
             DuelReader,
             r,
             options,
-            no_abort=pl._("Invalid specifier. Retry."),
-            prompt=pl._("Select a card:"),
-            restore_parser=DuelParser,
         )
 
     cards = []
@@ -47,11 +40,9 @@ def idle_action(self, pl):
     def r(caller):
         if caller.text == "b" and self.to_bp:
             self.set_responsei(6)
-            reactor.callLater(0, process_duel, self)
             return
         elif caller.text == "e" and self.to_ep:
             self.set_responsei(7)
-            reactor.callLater(0, process_duel, self)
             return
         elif caller.text == "?":
             self.show_usable(pl)
@@ -60,7 +51,6 @@ def idle_action(self, pl):
                 r,
                 no_abort=pl._("Invalid specifier. Retry."),
                 prompt=pl._("Select a card:"),
-                restore_parser=DuelParser,
             )
         if caller.text not in specs:
             pl.notify(pl._("Invalid specifier. Retry."))

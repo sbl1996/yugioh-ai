@@ -1,39 +1,36 @@
-from twisted.internet import reactor
-
 from ygo.duel_reader import DuelReader
-from ygo.utils import process_duel
-from ygo.parsers.duel_parser import DuelParser
+from ygo.duel import Duel
 
-def battle_activate(self, pl):
+
+def battle_activate(duel: Duel, pl):
 	pln = pl.duel_player
 	pl.notify(pl._("Select card to activate:"))
 
 	specs = {}
-	for c in self.activatable:
+	for c in duel.activatable:
 		spec = c.get_spec(pl)
 		pl.notify("%s: %s (%d/%d)" % (spec, c.get_name(pl), c.attack, c.defense))
 		specs[spec] = c
 
 	pl.notify(pl._("z: back."))
 
-	def r(caller):
-		if caller.text == 'z':
-			self.display_battle_menu(pl)
-			return
-		if caller.text not in specs:
-			pl.notify(pl._("Invalid cardspec. Retry."))
-			pl.notify(DuelReader, r, no_abort="Invalid command", restore_parser=DuelParser)
-			return
-		card = specs[caller.text]
-		seq = self.activatable.index(card)
-		self.set_responsei((seq << 16))
-		reactor.callLater(0, process_duel, self)
-	
 	options = []
 	options.append('z')
 	for s in specs:
 		options.append(s)
 
-	pl.notify(DuelReader, r, options, no_abort="Invalid command", restore_parser=DuelParser)
+	def r(caller):
+		if caller.text == 'z':
+			duel.display_battle_menu(pl)
+			return
+		if caller.text not in specs:
+			pl.notify(pl._("Invalid cardspec. Retry."))
+			pl.notify(DuelReader, r, options)
+			return
+		card = specs[caller.text]
+		seq = duel.activatable.index(card)
+		duel.set_responsei((seq << 16))
+	
+	pl.notify(DuelReader, r, options)
 
 METHODS = {'battle_activate': battle_activate}

@@ -1,36 +1,44 @@
 import io
-from twisted.internet import reactor
 
 from ygo.card import Card
-from ygo.parsers.yes_or_no_parser import yes_or_no_parser
-from ygo.utils import process_duel
+from ygo.duel import Duel
+from ygo.duel_reader import DuelReader
 
-def msg_yesno(self, data):
-	data = io.BytesIO(data[1:])
-	player = self.read_u8(data)
-	desc = self.read_u32(data)
-	self.cm.call_callbacks('yesno', player, desc)
-	return data.read()
 
-def yesno(self, player, desc):
-	pl = self.players[player]
-	old_parser = pl.connection.parser
-	def yes(caller):
-		self.set_responsei(1)
-		reactor.callLater(0, process_duel, self)
-	def no(caller):
-		self.set_responsei(0)
-		reactor.callLater(0, process_duel, self)
-	if desc > 10000:
-		code = desc >> 4
-		card = Card(code)
-		opt = card.get_strings(pl)[desc & 0xf]
-		if opt == '':
-			opt = pl._('Unknown question from %s. Yes or no?')%(card.get_name(pl))
-	else:
-		opt = "String %d" % desc
-		opt = pl.strings['system'].get(desc, opt)
-	pl.notify(yes_or_no_parser, opt, yes, no=no, restore_parser=old_parser)
+def msg_yesno(duel: Duel, data):
+    data = io.BytesIO(data[1:])
+    player = duel.read_u8(data)
+    desc = duel.read_u32(data)
+    duel.cm.call_callbacks("yesno", player, desc)
+    return data.read()
+
+
+def yesno(duel: Duel, player, desc):
+    pl = duel.players[player]
+    if desc > 10000:
+        code = desc >> 4
+        card = Card(code)
+        opt = card.get_strings(pl)[desc & 0xf]
+        if opt == '':
+            opt = pl._('Unknown question from %s. Yes or no?')%(card.get_name(pl))
+    else:
+        opt = "String %d" % desc
+        opt = pl.strings['system'].get(desc, opt)
+
+    def prompt():
+        pl.notify(opt)
+        pl.notify(pl._("Please enter y or n."))
+        pl.notify(DuelReader, r, ['y', 'n'])
+
+    def r(caller):
+        if caller.text.lower().startswith('y'):
+            duel.set_responsei(1)
+        elif caller.text.lower().startswith('n'):
+            duel.set_responsei(0)
+        else:
+            prompt()
+
+    prompt()
 
 MESSAGES = {13: msg_yesno}
 

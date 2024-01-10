@@ -1,49 +1,63 @@
 from itertools import product, combinations
 
 import io
-from twisted.internet import reactor
 
 from ygo.card import Card
 from ygo.constants import LOCATION
+from ygo.duel import Duel
 from ygo.duel_reader import DuelReader
-from ygo.parsers.duel_parser import DuelParser
-from ygo.utils import parse_ints, process_duel, check_sum, handle_error, find_combinations
+from ygo.utils import parse_ints, check_sum
 
-def msg_select_sum(self, data):
+
+def msg_select_sum(duel: Duel, data):
     data = io.BytesIO(data[1:])
-    mode = self.read_u8(data)
-    player = self.read_u8(data)
-    val = self.read_u32(data)
-    select_min = self.read_u8(data)
-    select_max = self.read_u8(data)
-    count = self.read_u8(data)
+    mode = duel.read_u8(data)
+    player = duel.read_u8(data)
+    val = duel.read_u32(data)
+    select_min = duel.read_u8(data)
+    select_max = duel.read_u8(data)
+    count = duel.read_u8(data)
     must_select = []
     for i in range(count):
-        code = self.read_u32(data)
+        code = duel.read_u32(data)
         card = Card(code)
-        card.controller = self.read_u8(data)
-        card.location = LOCATION(self.read_u8(data))
-        card.sequence = self.read_u8(data)
-        param = self.read_u32(data)
+        card.controller = duel.read_u8(data)
+        card.location = LOCATION(duel.read_u8(data))
+        card.sequence = duel.read_u8(data)
+        param = duel.read_u32(data)
         card.param = (param & 0xff, param >> 16)
         must_select.append(card)
-    count = self.read_u8(data)
+    count = duel.read_u8(data)
     select_some = []
     for i in range(count):
-        code = self.read_u32(data)
+        code = duel.read_u32(data)
         card = Card(code)
-        card.controller = self.read_u8(data)
-        card.location = LOCATION(self.read_u8(data))
-        card.sequence = self.read_u8(data)
-        param = self.read_u32(data)
+        card.controller = duel.read_u8(data)
+        card.location = LOCATION(duel.read_u8(data))
+        card.sequence = duel.read_u8(data)
+        param = duel.read_u32(data)
         card.param = (param & 0xff, param >> 16)
         select_some.append(card)
-    self.cm.call_callbacks('select_sum', mode, player, val, select_min, select_max, must_select, select_some)
+    duel.cm.call_callbacks('select_sum', mode, player, val, select_min, select_max, must_select, select_some)
     return data.read()
 
 
-def select_sum(self, mode, player, val, select_min, select_max, must_select, select_some):
-    pl = self.players[player]
+def find_combinations(cards, expected, at_least=False):
+    result = []
+    for r in range(1, len(cards) + 1):
+        for subset in combinations(cards, r):
+            for levels in product(*[card[1] for card in subset]):
+                if at_least:
+                    if sum(levels) >= expected:
+                        result.append(tuple(card[0] for card in subset))
+                else:
+                    if sum(levels) == expected:
+                        result.append(tuple(card[0] for card in subset))
+    return result
+
+
+def select_sum(duel: Duel, mode, player, val, select_min, select_max, must_select, select_some):
+    pl = duel.players[player]
 
     must_select_levels = []
 
@@ -74,7 +88,6 @@ def select_sum(self, mode, player, val, select_min, select_max, must_select, sel
             if len(must_select_levels) == 1:
                 expected = val - must_select_levels[0]
                 options = find_combinations(card_levels, expected)
-                options = [ tuple(x[0] for x in comb) for comb in options ]
                 options = list(set(options))
                 options = [" ".join(str(i) for i in ints) for ints in options]
                 pl.notify(pl._("Select cards with a total value of %d, seperated by spaces.") % (expected))
@@ -82,16 +95,13 @@ def select_sum(self, mode, player, val, select_min, select_max, must_select, sel
                 options = []
                 for l in must_select_levels:
                     expected = val - l
-                    options.extend(
-                        [ tuple(x[0] for x in comb) for comb in find_combinations(card_levels, expected) ]
-                    )
+                    options.extend(find_combinations(card_levels, expected))
                 options = list(set(options))
                 options = [" ".join(str(i) for i in ints) for ints in options]				
                 pl.notify(pl._("Select cards with a total value being one of the following, seperated by spaces: %s") % (', '.join([str(val - l) for l in must_select_levels])))
         else:
             expected = val - must_select_levels[0]
             options = find_combinations(card_levels, expected, at_least=True)
-            options = [ tuple(x[0] for x in comb) for comb in options ]
             options = list(set(options))
             options = [" ".join(str(i) for i in ints) for ints in options]
             pl.notify(pl._("Select cards with a total value of at least %d, seperated by spaces.") % (val - must_select_levels[0]))
@@ -99,12 +109,12 @@ def select_sum(self, mode, player, val, select_min, select_max, must_select, sel
             pl.notify(pl._("%s must be selected, automatically selected.") % c.get_name(pl))
         for i, card in enumerate(select_some):
             pl.notify("%d: %s (%s)" % (i+1, card.get_name(pl), (' ' + pl._('or') + ' ').join([str(p) for p in card.param if p > 0])))
-        return pl.notify(DuelReader, r, options, no_abort="Invalid entry.", restore_parser=DuelParser)
+        return pl.notify(DuelReader, r, options)
+
     def error(t):
         pl.notify(t)
         return prompt()
 
-    @handle_error
     def r(caller):
         ints = [i - 1 for i in parse_ints(caller.text)]
         if len(ints) != len(set(ints)):
@@ -134,9 +144,9 @@ def select_sum(self, mode, player, val, select_min, select_max, must_select, sel
         lst.extend([0] * len(must_select))
         lst.extend(ints)
         b = bytes(lst)
-        self.set_responseb(b)
-        reactor.callLater(0, process_duel, self)
+        duel.set_responseb(b)
     prompt()
+
 
 def check(cards, acc):
     sum = 0

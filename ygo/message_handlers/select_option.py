@@ -1,58 +1,62 @@
 import io
-from twisted.internet import reactor
 
 from ygo.card import Card
-from ygo.duel_menu import DuelMenu
-from ygo.parsers.duel_parser import DuelParser
-from ygo.utils import process_duel
+from ygo.duel import Duel
+from ygo.duel_reader import DuelReader
+from ygo.utils import parse_ints
 
-def msg_select_option(self, data):
-	data = io.BytesIO(data[1:])
-	player = self.read_u8(data)
-	size = self.read_u8(data)
-	options = []
-	for i in range(size):
-		options.append(self.read_u32(data))
-	self.cm.call_callbacks("select_option", player, options)
-	return data.read()
 
-def select_option(self, player, options):
-	pl = self.players[player]
-	def select(caller, idx):
+def msg_select_option(duel: Duel, data):
+    data = io.BytesIO(data[1:])
+    player = duel.read_u8(data)
+    size = duel.read_u8(data)
+    options = []
+    for i in range(size):
+        options.append(duel.read_u32(data))
+    duel.cm.call_callbacks("select_option", player, options)
+    return data.read()
 
-		opt = options[idx]
 
-		for p in self.players+self.watchers:
+def select_option(duel: Duel, player, options):
+    pl = duel.players[player]
 
-			if opt > 10000:
-				string = card.get_strings(p)[opt & 0xf]
-			else:
-				string = p._("Unknown option %d" % opt)
-				string = p.strings['system'].get(opt, string)
+    card = None
+    opts = []
+    for opt in options:
+        if opt > 10000:
+            code = opt >> 4
+            card = Card(code)
+            string = card.get_strings(pl)[opt & 0xf]
+        else:
+            string = pl._("Unknown option %d" % opt)
+            string = pl.strings['system'].get(opt, string)
+        opts.append(string)
 
-			if p is pl:
-				p.notify(p._("You selected option {0}: {1}").format(idx + 1, string))
-			else:
-				p.notify(p._("{0} selected option {1}: {2}").format(pl.nickname, idx + 1, string))
+    def prompt():
+        pl.notify(pl._("Select option:"))
+        valid = [str(i + 1) for i in range(len(opts))]
+        for i, opt in enumerate(opts):
+            pl.notify("%d: %s" % (i + 1, opt))
+        pl.notify(DuelReader, r, valid)
 
-		self.set_responsei(idx)
-		reactor.callLater(0, process_duel, self)
+    def error(text):
+        pl.notify(text)
+        return prompt()
 
-	card = None
-	opts = []
-	for opt in options:
-		if opt > 10000:
-			code = opt >> 4
-			card = Card(code)
-			string = card.get_strings(pl)[opt & 0xf]
-		else:
-			string = pl._("Unknown option %d" % opt)
-			string = pl.strings['system'].get(opt, string)
-		opts.append(string)
-	m = DuelMenu(pl._("Select option:"), no_abort=pl._("Invalid option."), prompt=pl._("Select option:"), persistent=True, restore_parser=DuelParser)
-	for idx, opt in enumerate(opts):
-		m.item(opt)(lambda caller, idx=idx: select(caller, idx))
-	pl.notify(m)
+    def r(caller):
+        idx = parse_ints(caller.text)
+        if not idx or len(idx) != 1 or idx[0] - 1 >= len(options):
+            return error(pl._("Invalid option."))
+        idx = idx[0] - 1
+        string = opts[idx]
+        for p in duel.players:
+            if p is pl:
+                p.notify(p._("You selected option {0}: {1}").format(idx + 1, string))
+            else:
+                p.notify(p._("{0} selected option {1}: {2}").format(pl.nickname, idx + 1, string))
+        duel.set_responsei(idx)
+
+    prompt()
 
 MESSAGES = {14: msg_select_option}
 

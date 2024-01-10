@@ -1,28 +1,28 @@
 import io
 import struct
-from twisted.internet import reactor
 
 from ygo.card import Card
 from ygo.constants import LOCATION
+from ygo.duel import Duel
 from ygo.duel_reader import DuelReader
-from ygo.parsers.duel_parser import DuelParser
-from ygo.utils import parse_ints, process_duel
+from ygo.utils import parse_ints
 
-def msg_select_counter(self, data):
+
+def msg_select_counter(duel: Duel, data):
     data = io.BytesIO(data[1:])
-    player = self.read_u8(data)
-    countertype = self.read_u16(data)
-    count = self.read_u16(data)
-    size = self.read_u8(data)
+    player = duel.read_u8(data)
+    countertype = duel.read_u16(data)
+    count = duel.read_u16(data)
+    size = duel.read_u8(data)
     cards = []
     for i in range(size):
-        card = Card(self.read_u32(data))
-        card.controller = self.read_u8(data)
-        card.location = LOCATION(self.read_u8(data))
-        card.sequence = self.read_u8(data)
-        card.counter = self.read_u16(data)
+        card = Card(duel.read_u32(data))
+        card.controller = duel.read_u8(data)
+        card.location = LOCATION(duel.read_u8(data))
+        card.sequence = duel.read_u8(data)
+        card.counter = duel.read_u16(data)
         cards.append(card)
-    self.cm.call_callbacks('select_counter', player, countertype, count, cards)
+    duel.cm.call_callbacks('select_counter', player, countertype, count, cards)
     return data.read()
 
 
@@ -64,8 +64,8 @@ def find_combinations(cards, expected_value, current_sum=0, current_combination=
     return combinations_found
 
 
-def select_counter(self, player, countertype, count, cards):
-    pl = self.players[player]
+def select_counter(duel: Duel, player, countertype, count, cards):
+    pl = duel.players[player]
     counter_str = pl.strings['counter'][countertype]
     def prompt():
         pl.notify(pl._("Type new {counter} for {cards} cards, separated by spaces.")
@@ -74,7 +74,7 @@ def select_counter(self, player, countertype, count, cards):
             pl.notify("%s (%d)" % (c.get_name(pl), c.counter))
         counters = [c.counter for c in cards]
         options = [ " ".join([str(x) for x in comb]) for comb in find_combinations(counters, count) ]
-        pl.notify(DuelReader, r, options, no_abort="Invalid command", restore_parser=DuelParser)
+        pl.notify(DuelReader, r, options)
     def error(text):
         pl.notify(text)
         return prompt()
@@ -88,8 +88,7 @@ def select_counter(self, player, countertype, count, cards):
         if sum(ints) != count:
             return error(pl._("Please specify %d values with a sum of %d.") % (len(cards), count))
         bytes = struct.pack('h' * len(cards), *ints)
-        self.set_responseb(bytes)
-        reactor.callLater(0, process_duel, self)
+        duel.set_responseb(bytes)
     prompt()
 
 MESSAGES = {22: msg_select_counter}

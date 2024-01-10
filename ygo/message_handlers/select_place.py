@@ -1,50 +1,50 @@
 import io
-from twisted.internet import reactor
 
+from ygo.duel import Duel
 from ygo.duel_reader import DuelReader
-from ygo.parsers.duel_parser import DuelParser
-from ygo.utils import process_duel
 
-def msg_select_place(self, data):
+
+def msg_select_place(duel: Duel, data):
 	data = io.BytesIO(data)
-	msg = self.read_u8(data)
-	player = self.read_u8(data)
-	count = self.read_u8(data)
+	msg = duel.read_u8(data)
+	player = duel.read_u8(data)
+	count = duel.read_u8(data)
 	if count == 0: count = 1
-	flag = self.read_u32(data)
-	self.cm.call_callbacks('select_place', player, count, flag)
+	flag = duel.read_u32(data)
+	duel.cm.call_callbacks('select_place', player, count, flag)
 	return data.read()
 
-def select_place(self, player, count, flag):
-	pl = self.players[player]
-	specs = self.flag_to_usable_cardspecs(flag)
+
+def select_place(duel: Duel, player, count, flag):
+	pl = duel.players[player]
+	specs = duel.flag_to_usable_cardspecs(flag)
 	if count == 1:
 		pl.notify(pl._("Select place for card, one of %s.") % ", ".join(specs))
 	else:
 		pl.notify(pl._("Select %d places for card, from %s.") % (count, ", ".join(specs)))
+
 	def r(caller):
 		values = caller.text.split()
 		if len(set(values)) != len(values):
 			pl.notify(pl._("Duplicate values not allowed."))
-			return pl.notify(DuelReader, r, no_abort=pl._("Invalid command"), restore_parser=duel_parser)
+			return pl.notify(DuelReader, r, specs)
 		if len(values) != count:
 			pl.notify(pl._("Please enter %d values.") % count)
-			return pl.notify(DuelReader, r, no_abort=pl._("Invalid command"), restore_parser=DuelParser)
+			return pl.notify(DuelReader, r, specs)
 		if any(value not in specs for value in values):
 			pl.notify(pl._("Invalid cardspec. Try again."))
-			pl.notify(DuelReader, r, no_abort=pl._("Invalid command"), restore_parser=DuelParser)
-			return
+			return pl.notify(DuelReader, r, specs)
 		resp = b''
 		for value in values:
-			l, s = self.cardspec_to_ls(value)
+			l, s = duel.cardspec_to_ls(value)
 			if value.startswith('o'):
 				plr = 1 - player
 			else:
 				plr = player
 			resp += bytes([plr, l, s])
-		self.set_responseb(resp)
-		reactor.callLater(0, process_duel, self)
-	pl.notify(DuelReader, r, specs, no_abort=pl._("Invalid command"), restore_parser=DuelParser)
+		duel.set_responseb(resp)
+
+	pl.notify(DuelReader, r, specs)
 
 MESSAGES = {18: msg_select_place, 24: msg_select_place}
 

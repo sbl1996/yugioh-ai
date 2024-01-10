@@ -9,31 +9,25 @@ import os
 import io
 import struct
 import random
-import binascii
 import pkgutil
 import re
 import datetime
 import natsort
-from twisted.internet import reactor
 
 from . import callback_manager
 from .card import Card
-from .constants import *
-from .constants import __
-from .duel_reader import DuelReader
-from .invite.joinable import Joinable
-from .utils import process_duel, handle_error
+from .constants import TYPE, LOCATION, POSITION, QUERY, INFORM
 from . import globals
 from . import message_handlers
-from .channels.say import Say
-from .channels.tag import Tag
-from .channels.watchers import Watchers
 
 if DUEL_AVAILABLE:
 	@ffi.def_extern()
 	def card_reader_callback(code, data):
 		cd = data[0]
 		row = globals.language_handler.primary_database.execute('select * from datas where id=?', (code,)).fetchone()
+		if row is None:
+			print("Card %d not found in database" % code)
+			raise RuntimeError
 		cd.code = code
 		cd.alias = row['alias']
 		cd.setcode = row['setcode']
@@ -69,9 +63,8 @@ if DUEL_AVAILABLE:
 
 	lib.set_script_reader(lib.script_reader_callback)
 
-class Duel(Joinable):
+class Duel:
 	def __init__(self, seed=None):
-		Joinable.__init__(self)
 		self.buf = ffi.new('char[]', 4096)
 		if seed is None:
 			seed = random.randint(0, 0xffffffff)
@@ -82,38 +75,35 @@ class Duel(Joinable):
 		self.to_ep = False
 		self.to_m2 = False
 		self.current_phase = 0
-		self.watchers = []
 		self.private = False
 		self.started = False
 		self.debug_mode = False
 		self.debug_fp = None
 		self.players = [None, None]
-		self.tag_players = []
 		self.lp = [8000, 8000]
 		self.started = False
 		self.message_map = {}
 		self.state = ''
 		self.cards = [None, None]
-		self.tag_cards = [None, None]
 		self.revealed = {}
-		self.say = Say()
-		self.watch = Watchers()
-		self.tags = [Tag(), Tag()]
 		self.bind_message_handlers()
 		self.pause_timer = None
 		self.revealing = [False, False]
+		self.unique_cards = None
 
 	def set_player_info(self, player, lp):
 		self.lp[player] = lp
 		lib.set_player_info(self.duel, player, lp, 5, 1)
 
-	def load_deck(self, player, shuffle = True, tag = False):
+	def load_deck(self, player, shuffle = True):
 		full_deck = player.deck['cards'][:]
 		c = []
 		fusion = []
 		xyz = []
 		synchro = []
 		link = []
+
+		cards = []
 
 		for tc in full_deck[::-1]:
 			cc = Card(tc)
@@ -128,6 +118,7 @@ class Duel(Joinable):
 					link.append([tc, cc.level])
 			else:
 				c.append(tc)
+			cards.append(cc)
 
 		if shuffle is True:
 			random.shuffle(c)
@@ -147,52 +138,10 @@ class Duel(Joinable):
 		for tc in link:
 			c.append(tc[0])
 
-		if tag is True:
-			self.tag_cards[player.duel_player] = c
-		else:
-			self.cards[player.duel_player] = c
+		self.cards[player.duel_player] = c
 		for sc in c[::-1]:
-			if tag is True:
-				if Card(sc).extra:
-					location = LOCATION.EXTRA.value
-				else:
-					location = LOCATION.DECK.value
-				lib.new_tag_card(self.duel, sc, player.duel_player, location)
-			else:
-				lib.new_card(self.duel, sc, player.duel_player, player.duel_player, LOCATION.DECK.value, 0, POSITION.FACEDOWN_DEFENSE.value)
-
-	def add_players(self, players, shuffle_players=True, shuffle_decks = True):
-		if len(players) == 4:
-			teams = [[players[0], players[1]], [players[2], players[3]]]
-			if shuffle_players is True:
-				random.shuffle(teams)
-				random.shuffle(teams[0])
-				random.shuffle(teams[1])
-			self.players = [teams[0][0], teams[1][0]]
-			self.tag_players = [teams[0][1], teams[1][1]]
-		else:
-			self.players = list(players)
-			if shuffle_players is True:
-				random.shuffle(self.players)
-
-		self.watchers = self.tag_players[:]
-
-		for i in range(2):
-			self.players[i].duel_player = i
-			self.players[i].duel = self
-			self.players[i].set_parser('DuelParser')
-			self.say.add_recipient(self.players[i])
-			self.watch.add_recipient(self.players[i])
-			self.tags[i].add_recipient(self.players[i])
-			self.load_deck(self.players[i], shuffle_decks)
-			if len(self.tag_players) > i:
-				self.tag_players[i].duel_player = i
-				self.tag_players[i].duel = self
-				self.tag_players[i].set_parser('DuelParser')
-				self.say.add_recipient(self.tag_players[i])
-				self.watch.add_recipient(self.tag_players[i])
-				self.tags[i].add_recipient(self.tag_players[i])
-				self.load_deck(self.tag_players[i], shuffle_decks, True)
+			lib.new_card(self.duel, sc, player.duel_player, player.duel_player, LOCATION.DECK.value, 0, POSITION.FACEDOWN_DEFENSE.value)
+		return cards
 
 	def start(self, options):
 		if os.environ.get('DEBUG', 0):
@@ -202,12 +151,6 @@ class Duel(Joinable):
 		for i, pl in enumerate(self.players):
 			pl.notify(pl._("Duel created. You are player %d.") % i)
 			pl.notify(pl._("Type help dueling for a list of usable commands."))
-			if len(self.tag_players) > i:
-				pl = self.tag_players[i]
-				pl.notify(pl._("Duel created. You are player %d.") % i)
-				pl.notify(pl._("Type help dueling for a list of usable commands."))
-				pl.notify(pl._("%s will go first.")%(self.players[i].nickname))
-		reactor.callLater(0, process_duel, self)
 
 	def end(self, timeout=False):
 		if not timeout and self.pause_timer:
@@ -215,23 +158,12 @@ class Duel(Joinable):
 		self.pause_timer = None
 		lib.end_duel(self.duel)
 		self.started = False
-		for pl in self.watchers:
-			if pl.watching is True:
-				pl.notify(pl._("Watching stopped."))
-		for pl in self.players + self.watchers:
+		for pl in self.players:
 			pl.duel = None
 			pl.duel_player = 0
-			pl.watching = False
 			pl.card_list = []
-			self.say.remove_recipient(pl)
-			self.watch.remove_recipient(pl)
-			self.tags[0].remove_recipient(pl)
-			self.tags[1].remove_recipient(pl)
-			self.room.restore(pl)
 		if self.debug_mode is True and self.debug_fp is not None:
 			self.debug_fp.close()
-		self.room.process()
-		self.room = None
 		self.duel = None
 
 	def process(self):
@@ -242,7 +174,6 @@ class Duel(Joinable):
 		data = self.process_messages(data)
 		return res
 
-	@handle_error
 	def process_messages(self, data):
 		while data:
 			msg = int(data[0])
@@ -289,7 +220,6 @@ class Duel(Joinable):
 		lib.set_responseb(self.duel, ffi.cast('byte *', buf))
 		self.cm.call_callbacks('debug', event_type='set_responseb', response=r.decode('latin1'))
 
-	@handle_error
 	def get_cards_in_location(self, player, location):
 		cards = []
 		flags = QUERY.CODE | QUERY.POSITION | QUERY.LEVEL | QUERY.RANK | QUERY.ATTACK | QUERY.DEFENSE | QUERY.EQUIP_CARD | QUERY.OVERLAY_CARD | QUERY.COUNTERS | QUERY.LSCALE | QUERY.RSCALE | QUERY.LINK
@@ -352,7 +282,6 @@ class Duel(Joinable):
 			cards.append(card)
 		return cards
 
-	@handle_error
 	def get_card(self, player, loc, seq):
 		flags = QUERY.CODE | QUERY.ATTACK | QUERY.DEFENSE | QUERY.POSITION | QUERY.LEVEL | QUERY.RANK | QUERY.LSCALE | QUERY.RSCALE | QUERY.LINK
 		bl = lib.query_card(self.duel, player, loc.value, seq, flags.value, ffi.cast('byte *', self.buf), False)
@@ -385,7 +314,23 @@ class Duel(Joinable):
 			card.defense = link_marker
 		return card
 
-	@handle_error
+	def get_card_by_name(self, pl, name):
+		r = re.compile(r'^(\d+)\.(.+)$')
+		r = r.search(name)
+		if r:
+			n, name = int(r.group(1)), r.group(2)
+		else:
+			n = 1
+		if n == 0:
+			n = 1
+		name = '%'+name+'%'
+		rows = pl.cdb.execute('select id from texts where name like ? limit ?', (name, n)).fetchall()
+		if not rows:
+			return
+		nr = rows[min(n - 1, len(rows) - 1)]
+		card = Card(nr[0])
+		return card
+
 	def unpack_location(self, loc):
 		controller = loc & 0xff
 		location = LOCATION((loc >> 8) & 0xff)
@@ -402,7 +347,6 @@ class Duel(Joinable):
 	# the Duel object, same goes for all additional methods mentioned
 	# in an additional METHODS dictionary attribute
 
-	@handle_error
 	def bind_message_handlers(self):
 
 		all_handlers = {}
@@ -453,7 +397,7 @@ class Duel(Joinable):
 		mset = natsort.natsorted([card.get_spec(pl) for card in self.idle_mset])
 		idle_set = natsort.natsorted([card.get_spec(pl) for card in self.idle_set])
 		idle_activate = natsort.natsorted([card.get_spec(pl) for card in self.idle_activate])
-		return list(set(summonable + spsummon + repos + mset + idle_set + idle_activate))
+		return natsort.natsorted(set(summonable + spsummon + repos + mset + idle_set + idle_activate))
 
 	def show_usable(self, pl):
 		summonable = natsort.natsorted([card.get_spec(pl) for card in self.summonable])
@@ -626,28 +570,17 @@ class Duel(Joinable):
 		ohand = lib.query_field_count(self.duel, 1 - player, LOCATION.HAND.value)
 		removed = lib.query_field_count(self.duel, player, LOCATION.REMOVED.value)
 		oremoved = lib.query_field_count(self.duel, 1 - player, LOCATION.REMOVED.value)
-		if pl.watching:
-			if self.tag is True:
-				nick0 = pl._("team %s")%(self.players[player].nickname+", "+self.tag_players[player].nickname)
-				nick1 = pl._("team %s")%(self.players[1 - player].nickname+", "+self.tag_players[1 - player].nickname)
-			else:
-				nick0 = self.players[player].nickname
-				nick1 = self.players[1 - player].nickname
-			pl.notify(pl._("LP: %s: %d %s: %d") % (nick0, self.lp[player], nick1, self.lp[1 - player]))
-			pl.notify(pl._("Hand: %s: %d %s: %d") % (nick0, hand, nick1, ohand))
-			pl.notify(pl._("Deck: %s: %d %s: %d") % (nick0, deck, nick1, odeck))
-			pl.notify(pl._("Grave: %s: %d %s: %d") % (nick0, grave, nick1, ograve))
-			pl.notify(pl._("Removed: %s: %d %s: %d") % (nick0, removed, nick1, oremoved))
-		else:
-			pl.notify(pl._("Your LP: %d Opponent LP: %d") % (self.lp[player], self.lp[1 - player]))
-			pl.notify(pl._("Hand: You: %d Opponent: %d") % (hand, ohand))
-			pl.notify(pl._("Deck: You: %d Opponent: %d") % (deck, odeck))
-			pl.notify(pl._("Grave: You: %d Opponent: %d") % (grave, ograve))
-			pl.notify(pl._("Removed: You: %d Opponent: %d") % (removed, oremoved))
+
+		pl.notify(pl._("Your LP: %d Opponent LP: %d") % (self.lp[player], self.lp[1 - player]))
+		pl.notify(pl._("Hand: You: %d Opponent: %d") % (hand, ohand))
+		pl.notify(pl._("Deck: You: %d Opponent: %d") % (deck, odeck))
+		pl.notify(pl._("Grave: You: %d Opponent: %d") % (grave, ograve))
+		pl.notify(pl._("Removed: You: %d Opponent: %d") % (removed, oremoved))
+
 		if self.paused:
 			pl.notify(pl._("This duel is currently paused."))
 		else:
-			if not pl.watching and pl.duel_player == self.tp and pl in self.players:
+			if pl.duel_player == self.tp and pl in self.players:
 				pl.notify(pl._("It's your turn."))
 			else:
 				pl.notify(pl._("It's %s's turn.")%(self.players[self.tp].nickname))
@@ -657,12 +590,7 @@ class Duel(Joinable):
 		cs = card.get_spec(pl)
 		opponent = 1 - pln
 		should_reveal = False
-		if pl.watching:
-			if cs.startswith('o') and self.revealing[opponent]:
-				should_reveal = True
-			elif not cs.startswith('o') and self.revealing[pln]:
-				should_reveal = True
-		if card.position & POSITION.FACEDOWN and ((pl.watching and not should_reveal) or (not pl.watching and card.controller == opponent)):
+		if card.position & POSITION.FACEDOWN and (card.controller == opponent):
 			pl.notify(pl._("%s: %s card.") % (cs, card.get_position(pl)))
 			return
 		pl.notify(card.get_info(pl))
@@ -685,20 +613,12 @@ class Duel(Joinable):
 	def start_debug(self, options):
 		self.debug_mode = True
 		lt = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-		if self.tag is True:
-			pl0 = self.players[0].nickname+","+self.tag_players[0].nickname
-			pl1 = self.players[1].nickname+","+self.tag_players[1].nickname
-		else:
-			pl0 = self.players[0].nickname
-			pl1 = self.players[1].nickname
+		pl0 = self.players[0].nickname
+		pl1 = self.players[1].nickname
 		fn = lt+"_"+pl0+"_"+pl1
 		self.debug_fp = open(os.path.join('duels', fn), 'w')
-		if self.tag is True:
-			players = [self.players[0].nickname, self.tag_players[0].nickname, self.players[1].nickname, self.tag_players[1].nickname]
-			decks = [self.cards[0], self.tag_cards[0], self.cards[1], self.tag_cards[1]]
-		else:
-			players = [self.players[0].nickname, self.players[1].nickname]
-			decks = [self.cards[0], self.cards[1]]
+		players = [self.players[0].nickname, self.players[1].nickname]
+		decks = [self.cards[0], self.cards[1]]
 		self.debug(event_type='start', players=players, decks=decks, seed=self.seed, options = options, lp = self.lp)
 
 	def player_disconnected(self, player):
@@ -714,59 +634,20 @@ class Duel(Joinable):
 				self.pause_timer = None
 
 	def pause(self):
-		for pl in self.players + self.watchers:
+		for pl in self.players:
 			pl.notify(pl._("Duel paused until all duelists reconnect."))
-		for pl in self.players+self.tag_players:
+		for pl in self.players:
 			if pl.connection is not None:
 				pl.paused_parser = pl.connection.parser
 				pl.set_parser('DuelParser')
-		if not self.pause_timer:
-			self.pause_timer = reactor.callLater(600, self.end, True)
 
 	def unpause(self):
-		for pl in self.players+self.tag_players:
+		for pl in self.players:
 			pl.connection.parser = pl.paused_parser
 			pl.paused_parser = None
-		for pl in self.players+self.watchers:
+		for pl in self.players:
 			pl.notify(pl._("Duel continues."))
 
-	def remove_watcher(self, pl):
-		try:
-			self.watchers.remove(pl)
-			if pl in self.room.teams[0]:
-				self.room.teams[0].remove(pl)
-			self.watch.remove_recipient(pl)
-			self.watch.send_message(pl, __("{player} is no longer watching this duel."))
-			pl.duel = None
-			pl.watching = False
-			self.say.remove_recipient(pl)
-			pl.notify(pl._("Watching stopped."))
-			pl.set_parser('LobbyParser')
-		except ValueError:
-			pass
-
-	def add_watcher(self, pl, player = 0):
-		pl.duel = self
-		pl.duel_player = player
-		pl.watching = True
-		self.say.add_recipient(pl)
-		if self.tag is True:
-			pl0 = pl._("team %s")%(self.players[player].nickname+", "+self.tag_players[player].nickname)
-			pl1 = pl._("team %s")%(self.players[1 - player].nickname+", "+self.tag_players[1 - player].nickname)
-		else:
-			pl0 = self.players[player].nickname
-			pl1 = self.players[1 - player].nickname
-		pl.notify(pl._("Watching duel between %s and %s.")%(pl0, pl1))
-		if not pl in self.room.teams[0]:
-			self.room.teams[0].append(pl)
-		self.watchers.append(pl)
-		self.watch.send_message(pl, __("{player} is now watching this duel."))
-		self.watch.add_recipient(pl)
-		pl.set_parser('DuelParser')
-		if self.paused:
-			pl.notify(pl._("The duel is currently paused due to not all players being connected."))
-
-	@handle_error
 	def inform(self, ref_player, *inf):
 		"""
 		informs specific players in a duel
@@ -783,9 +664,7 @@ class Duel(Joinable):
 			raise ValueError("reference player must be duelling in this duel")
 			
 		players = self.players[:]
-		tag_players = self.tag_players[:]
-		watchers = list(filter(lambda p: p not in tag_players, self.watchers))
-		all = players + tag_players + watchers
+		all = players
 
 		informed = {}
 
@@ -801,11 +680,7 @@ class Duel(Joinable):
 			to_be_informed = list(filter(lambda p: \
 				p not in informed and (\
 					(key & INFORM.PLAYER and p is ref_player) or \
-					(key & INFORM.OPPONENT and p is not ref_player and p in players) or \
-					(key & INFORM.TAG_PLAYER and p.duel_player == ref_player.duel_player and p in tag_players) or \
-					(key & INFORM.TAG_OPPONENT and p.duel_player != ref_player.duel_player and p in tag_players) or \
-					(key & INFORM.WATCHERS_PLAYER and p.duel_player == ref_player.duel_player and p in watchers) or \
-					(key & INFORM.WATCHERS_OPPONENT and p.duel_player != ref_player.duel_player and p in watchers)\
+					(key & INFORM.OPPONENT and p is not ref_player and p in players)
 				), all))
 
 			for p in to_be_informed:
@@ -835,7 +710,3 @@ class Duel(Joinable):
 	@property
 	def paused(self):
 		return len(self.players) != len([p for p in self.players if p.connection is not None])
-
-	@property
-	def tag(self):
-		return len(self.tag_players) > 0

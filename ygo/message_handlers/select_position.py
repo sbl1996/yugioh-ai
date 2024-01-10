@@ -1,38 +1,58 @@
 import io
-from twisted.internet import reactor
 
 from ygo.card import Card
 from ygo.constants import POSITION
-from ygo.duel_menu import DuelMenu
-from ygo.parsers.duel_parser import DuelParser
-from ygo.utils import process_duel
+from ygo.duel import Duel
+from ygo.duel_reader import DuelReader
+from ygo.utils import parse_ints
 
-def msg_select_position(self, data):
+
+def msg_select_position(duel: Duel, data):
     data = io.BytesIO(data[1:])
-    player = self.read_u8(data)
-    code = self.read_u32(data)
+    player = duel.read_u8(data)
+    code = duel.read_u32(data)
     card = Card(code)
-    positions = POSITION(self.read_u8(data))
-    self.cm.call_callbacks("select_position", player, card, positions)
+    positions = POSITION(duel.read_u8(data))
+    duel.cm.call_callbacks("select_position", player, card, positions)
     return data.read()
 
 
-def select_position(self, player, card, positions):
-    pl = self.players[player]
-    m = DuelMenu(pl._("Select position for %s:") % (card.get_name(pl),), no_abort="Invalid option.", persistent=True, restore_parser=DuelParser)
-    def set(caller, pos=None):
-        print("Found", caller.text)
-        self.set_responsei(pos)
-        reactor.callLater(0, process_duel, self)
-    if positions & POSITION.FACEUP_ATTACK:
-        m.item(pl._("Face-up attack"))(lambda caller: set(caller, 1))
-    if positions & POSITION.FACEDOWN_ATTACK:
-        m.item(pl._("Face-down attack"))(lambda caller: set(caller, 2))
-    if positions & POSITION.FACEUP_DEFENSE:
-        m.item(pl._("Face-up defense"))(lambda caller: set(caller, 4))
-    if positions & POSITION.FACEDOWN_DEFENSE:
-        m.item(pl._("Face-down defense"))(lambda caller: set(caller, 8))
-    pl.notify(m)
+def select_position(duel: Duel, player, card, positions):
+    pl = duel.players[player]
+    menus = [
+        (POSITION.FACEUP_ATTACK, "Face-up attack", 1),
+        (POSITION.FACEDOWN_ATTACK, "Face-down attack", 2),
+        (POSITION.FACEUP_DEFENSE, "Face-up defense", 4),
+        (POSITION.FACEDOWN_DEFENSE, "Face-down defense", 8),
+    ]
+    valid_positions = []
+    for i, (pos, name, resp) in enumerate(menus):
+        if positions & pos:
+            valid_positions.append(i)
+
+    def prompt():
+        pl.notify(pl._("Select position for %s:") % (card.get_name(pl),))
+        options = []
+        for i, pi in enumerate(valid_positions):
+            name = menus[pi][1]
+            options.append(str(i + 1))
+            pl.notify("%d: %s" % (i + 1, name))
+        pl.notify(DuelReader, r, options)
+
+    def error(text):
+        pl.notify(text)
+        return prompt()
+
+    def r(caller):
+        p = parse_ints(caller.text)
+        if not p or len(p) != 1 or p[0] - 1 >= len(valid_positions):
+            return error(pl._("Invalid position."))
+        p = p[0] - 1
+        resp = menus[valid_positions[p]][2]
+        duel.set_responsei(resp)
+
+    prompt()
+
 
 MESSAGES = {19: msg_select_position}
 

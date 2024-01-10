@@ -20,9 +20,6 @@ def set(self, card):
 	on = self.players[c].nickname
 	opl.notify(opl._("%s sets %s in %s position.") %
 	(on, card.get_spec(opl), card.get_position(opl)))
-	for pl in self.watchers:
-		pl.notify(pl._("%s sets %s in %s position.") %
-		(on, card.get_spec(pl), card.get_position(pl)))
 
 MESSAGES = {54: msg_set}
 

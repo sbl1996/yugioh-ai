@@ -16,7 +16,7 @@ def msg_summoning(self, data, special=False):
 
 def summoning(self, card, special=False):
 	nick = self.players[card.controller].nickname
-	for pl in self.players + self.watchers:
+	for pl in self.players:
 		pos = card.get_position(pl)
 		if special:
 			if card.type & TYPE.LINK:

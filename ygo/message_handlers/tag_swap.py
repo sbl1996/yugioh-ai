@@ -3,6 +3,7 @@ import io
 from ygo.card import Card
 
 def msg_tag_swap(self, data):
+	raise NotImplementedError("msg_tag_swap")
 	data = io.BytesIO(data[1:])
 	player = self.read_u8(data)
 	main_deck_count = self.read_u8(data)

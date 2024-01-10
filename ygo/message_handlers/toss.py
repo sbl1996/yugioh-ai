@@ -13,7 +13,7 @@ def msg_toss_coin(self, data, dice=False):
 
 def toss_coin(self, player, options):
 	players = []
-	players.extend(self.players + self.watchers)
+	players.extend(self.players)
 	for pl in players:
 		s = pl.strings['system'][1623] + " "
 		opts = [pl.strings['system'][60] if opt else pl.strings['system'][61] for opt in options]
@@ -23,7 +23,7 @@ def toss_coin(self, player, options):
 def toss_dice(self, player, options):
 	opts = [str(opt) for opt in options]
 	players = []
-	players.extend(self.players + self.watchers)
+	players.extend(self.players)
 	for pl in players:
 		s = pl.strings['system'][1624] + " "
 		s += ", ".join(opts)

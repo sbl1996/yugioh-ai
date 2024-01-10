@@ -27,7 +27,7 @@ def battle(self, attacker, aa, ad, bd0, tloc, da, dd, bd1):
 		target = self.get_card(tc, tl, tseq)
 	else:
 		target = None
-	for pl in self.players + self.watchers:
+	for pl in self.players:
 		if card.type & TYPE.LINK:
 			attacker_points = "%d"%aa
 		else:
