@@ -66,6 +66,13 @@ class FakePlayer:
             func = args[0]
             chosen = input()
             func(Response(chosen, self))
+        elif isinstance(arg1, DuelMenu):
+            chosen = input()
+            arg1.huh(Response(chosen, self))
+        elif arg1 == yes_or_no_parser:
+            opt, yes = args[0], args[1]
+            chosen = input()
+            yes_or_no_parser(opt, yes, **kwargs).huh(Response(chosen, self))
         else:
             print(self.duel_player, arg1)
 
