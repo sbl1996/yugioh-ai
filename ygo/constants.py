@@ -1,7 +1,4 @@
-try:
-	from enum import Flag, auto, unique, IntFlag
-except ImportError:
-	from aenum import Flag, auto, unique, IntFlag
+from enum import Flag, auto, unique, IntFlag
 
 __ = lambda s: s
 

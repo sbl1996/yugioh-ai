@@ -11,7 +11,6 @@ import struct
 import random
 import pkgutil
 import re
-import datetime
 import natsort
 
 from . import callback_manager
