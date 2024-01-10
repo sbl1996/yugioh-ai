@@ -3,6 +3,7 @@ import natsort
 import os.path
 import sys
 import traceback
+from itertools import combinations, product
 
 from .banlist import Banlist
 from . import globals
@@ -118,3 +119,17 @@ def handle_error(f):
 			forward_error()
 			raise e
 	return catch
+
+
+def find_combinations(cards, expected, at_least=False):
+    result = []
+    for r in range(1, len(cards) + 1):
+        for subset in combinations(cards, r):
+            for levels in product(*[card[1] for card in subset]):
+                if at_least:
+                    if sum(levels) >= expected:
+                        result.append(list(zip([card[0] for card in subset], levels)))
+                else:
+                    if sum(levels) == expected:
+                        result.append(list(zip([card[0] for card in subset], levels)))
+    return result

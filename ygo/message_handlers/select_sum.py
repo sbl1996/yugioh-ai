@@ -7,7 +7,7 @@ from ygo.card import Card
 from ygo.constants import LOCATION
 from ygo.duel_reader import DuelReader
 from ygo.parsers.duel_parser import DuelParser
-from ygo.utils import parse_ints, process_duel, check_sum, handle_error
+from ygo.utils import parse_ints, process_duel, check_sum, handle_error, find_combinations
 
 def msg_select_sum(self, data):
     data = io.BytesIO(data[1:])
@@ -42,20 +42,6 @@ def msg_select_sum(self, data):
     return data.read()
 
 
-def find_combinations(cards, expected, at_least=False):
-    result = []
-    for r in range(1, len(cards) + 1):
-        for subset in combinations(cards, r):
-            for levels in product(*[card[1] for card in subset]):
-                if at_least:
-                    if sum(levels) >= expected:
-                        result.append(tuple([card[0] for card in subset]))
-                else:
-                    if sum(levels) == expected:
-                        result.append(tuple([card[0] for card in subset]))
-    return result
-
-
 def select_sum(self, mode, player, val, select_min, select_max, must_select, select_some):
     pl = self.players[player]
 
@@ -88,6 +74,7 @@ def select_sum(self, mode, player, val, select_min, select_max, must_select, sel
             if len(must_select_levels) == 1:
                 expected = val - must_select_levels[0]
                 options = find_combinations(card_levels, expected)
+                options = [ tuple(x[0] for x in comb) for comb in options ]
                 options = list(set(options))
                 options = [" ".join(str(i) for i in ints) for ints in options]
                 pl.notify(pl._("Select cards with a total value of %d, seperated by spaces.") % (expected))
@@ -95,13 +82,16 @@ def select_sum(self, mode, player, val, select_min, select_max, must_select, sel
                 options = []
                 for l in must_select_levels:
                     expected = val - l
-                    options.extend(find_combinations(card_levels, expected))
+                    options.extend(
+                        [ tuple(x[0] for x in comb) for comb in find_combinations(card_levels, expected) ]
+                    )
                 options = list(set(options))
                 options = [" ".join(str(i) for i in ints) for ints in options]				
                 pl.notify(pl._("Select cards with a total value being one of the following, seperated by spaces: %s") % (', '.join([str(val - l) for l in must_select_levels])))
         else:
             expected = val - must_select_levels[0]
             options = find_combinations(card_levels, expected, at_least=True)
+            options = [ tuple(x[0] for x in comb) for comb in options ]
             options = list(set(options))
             options = [" ".join(str(i) for i in ints) for ints in options]
             pl.notify(pl._("Select cards with a total value of at least %d, seperated by spaces.") % (val - must_select_levels[0]))

@@ -87,9 +87,9 @@ class RandomAI(FakePlayer):
                 func, options = args[0], args[1]
 
                 msg = re.search(r'<function (\w+)\.<locals>\.', str(func)).group(1)
-                self.statistic[msg] += 1
                 if msg == 'handle_error':
                     msg = "select_sum"
+                self.statistic[msg] += 1
                 print(msg)
                     # chosen = input()
                 chosen = random.choice(options)

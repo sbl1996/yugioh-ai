@@ -1,4 +1,4 @@
-setup: requirements ffi script locale/en/cards.cdb
+setup: requirements ffi script locale/en/cards.cdb locale/zh/cards.cdb
 
 requirements:
 	pip install -r requirements.txt
@@ -23,14 +23,17 @@ vendor/lua-5.3.5/src/liblua.a: vendor/lua-5.3.5
 
 vendor/ygopro-core:
 	wget https://github.com/Fluorohydride/ygopro-core/archive/master.zip
-	unzip master.zip -d vendor; mv vendor/ygopro-core-master $@
+	unzip -q master.zip -d vendor; mv vendor/ygopro-core-master $@
 	rm master.zip
 	cd $@ && patch -p0 < ../../etc/ygopro-core.patch && sed -i '14i\#include <cstring>' field.h
 
 vendor/ygopro-scripts:
 	wget https://github.com/Fluorohydride/ygopro-scripts/archive/master.zip
-	unzip master.zip -d vendor; mv vendor/ygopro-scripts-master $@
+	unzip -q master.zip -d vendor; mv vendor/ygopro-scripts-master $@
 	rm master.zip
 
 locale/en/cards.cdb:
 	wget https://github.com/mycard/ygopro-database/raw/master/locales/en-US/cards.cdb -O $@
+
+locale/zh/cards.cdb:
+	wget https://github.com/mycard/ygopro-database/raw/master/locales/zh-CN/cards.cdb -O $@
