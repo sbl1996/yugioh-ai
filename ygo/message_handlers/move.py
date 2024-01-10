@@ -2,7 +2,6 @@ import io
 
 from ygo.card import Card
 from ygo.constants import *
-from ygo.utils import handle_error
 import ygo.exceptions
 
 def msg_move(self, data):
@@ -14,7 +13,6 @@ def msg_move(self, data):
 	self.cm.call_callbacks('move', code, location, newloc, reason)
 	return data.read()
 
-@handle_error
 def move(self, code, location, newloc, reason):
 	try:
 		card = Card(code)

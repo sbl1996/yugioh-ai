@@ -75,10 +75,6 @@ class Duel:
 		self.to_ep = False
 		self.to_m2 = False
 		self.current_phase = 0
-		self.private = False
-		self.started = False
-		self.debug_mode = False
-		self.debug_fp = None
 		self.players = [None, None]
 		self.lp = [8000, 8000]
 		self.started = False
@@ -87,7 +83,6 @@ class Duel:
 		self.cards = [None, None]
 		self.revealed = {}
 		self.bind_message_handlers()
-		self.pause_timer = None
 		self.revealing = [False, False]
 		self.unique_cards = None
 
@@ -144,8 +139,6 @@ class Duel:
 		return cards
 
 	def start(self, options):
-		if os.environ.get('DEBUG', 0):
-			self.start_debug(options)
 		lib.start_duel(self.duel, options)
 		self.started = True
 		for i, pl in enumerate(self.players):
@@ -153,24 +146,18 @@ class Duel:
 			pl.notify(pl._("Type help dueling for a list of usable commands."))
 
 	def end(self, timeout=False):
-		if not timeout and self.pause_timer:
-			self.pause_timer.cancel()
-		self.pause_timer = None
 		lib.end_duel(self.duel)
 		self.started = False
 		for pl in self.players:
 			pl.duel = None
 			pl.duel_player = 0
 			pl.card_list = []
-		if self.debug_mode is True and self.debug_fp is not None:
-			self.debug_fp.close()
 		self.duel = None
 
 	def process(self):
 		res = lib.process(self.duel)
 		l = lib.get_message(self.duel, ffi.cast('byte *', self.buf))
 		data = ffi.unpack(self.buf, l)
-		self.cm.call_callbacks('debug', event_type='process', result=res, data=data.decode('latin1'))
 		data = self.process_messages(data)
 		return res
 
@@ -213,12 +200,10 @@ class Duel:
 
 	def set_responsei(self, r):
 		lib.set_responsei(self.duel, r)
-		self.cm.call_callbacks('debug', event_type='set_responsei', response=r)
 
 	def set_responseb(self, r):
 		buf = ffi.new('char[64]', r)
 		lib.set_responseb(self.duel, ffi.cast('byte *', buf))
-		self.cm.call_callbacks('debug', event_type='set_responseb', response=r.decode('latin1'))
 
 	def get_cards_in_location(self, player, location):
 		cards = []
@@ -589,7 +574,6 @@ class Duel:
 		pln = pl.duel_player
 		cs = card.get_spec(pl)
 		opponent = 1 - pln
-		should_reveal = False
 		if card.position & POSITION.FACEDOWN and (card.controller == opponent):
 			pl.notify(pl._("%s: %s card.") % (cs, card.get_position(pl)))
 			return
@@ -610,43 +594,6 @@ class Duel:
 			return
 		self.show_info(specs[spec], pl)
 
-	def start_debug(self, options):
-		self.debug_mode = True
-		lt = datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-		pl0 = self.players[0].nickname
-		pl1 = self.players[1].nickname
-		fn = lt+"_"+pl0+"_"+pl1
-		self.debug_fp = open(os.path.join('duels', fn), 'w')
-		players = [self.players[0].nickname, self.players[1].nickname]
-		decks = [self.cards[0], self.cards[1]]
-		self.debug(event_type='start', players=players, decks=decks, seed=self.seed, options = options, lp = self.lp)
-
-	def player_disconnected(self, player):
-		if not self.paused:
-			self.pause()
-
-	def player_reconnected(self, pl):
-		pl.set_parser('DuelParser')
-		if not self.paused:
-			self.unpause()
-			if self.pause_timer:
-				self.pause_timer.cancel()
-				self.pause_timer = None
-
-	def pause(self):
-		for pl in self.players:
-			pl.notify(pl._("Duel paused until all duelists reconnect."))
-		for pl in self.players:
-			if pl.connection is not None:
-				pl.paused_parser = pl.connection.parser
-				pl.set_parser('DuelParser')
-
-	def unpause(self):
-		for pl in self.players:
-			pl.connection.parser = pl.paused_parser
-			pl.paused_parser = None
-		for pl in self.players:
-			pl.notify(pl._("Duel continues."))
 
 	def inform(self, ref_player, *inf):
 		"""

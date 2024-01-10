@@ -8,15 +8,15 @@ def display_battle_menu(duel: Duel, pl):
     cspecs = {}
     pl.notify(pl._("Battle menu:"))
     if duel.attackable:
-        aspecs = {"a"+c.get_spec(pl):c for c in duel.attackable}
+        aspecs = {"a" + c.get_spec(pl): c for c in duel.attackable}
         # options.extend(aspecs)
         options.append("a")
         pl.notify(pl._("a: Attack."))
     if duel.activatable:
-        cspecs = {"c"+c.get_spec(pl):c for c in duel.activatable}
+        cspecs = {"c" + c.get_spec(pl): c for c in duel.activatable}
         # options.extend(cspecs)
         options.append("c")
-        pl.notify(pl._("c: activate."))
+        pl.notify(pl._("c: Activate."))
     if duel.to_m2:
         options.append("m")
         pl.notify(pl._("m: Main phase 2."))
@@ -28,9 +28,9 @@ def display_battle_menu(duel: Duel, pl):
 
     def r(caller):
         if caller.text == "a" and duel.attackable:
-            duel.battle_attack(caller.connection.player)
+            duel.battle_attack(pl)
         elif caller.text == "c" and duel.activatable:
-            duel.battle_activate(caller.connection.player)
+            duel.battle_activate(pl)
         elif caller.text == "e" and duel.to_ep:
             duel.set_responsei(3)
         elif caller.text == "m" and duel.to_m2:

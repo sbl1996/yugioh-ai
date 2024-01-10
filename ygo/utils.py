@@ -1,11 +1,7 @@
 import collections
-import natsort
 import os.path
 import sys
-import traceback
 
-from .banlist import Banlist
-from . import globals
 
 try:
 	from _duel import ffi, lib
@@ -13,25 +9,6 @@ try:
 except ImportError:
 	DUEL_AVAILABLE = False
 
-def parse_lflist(filename):
-
-	lst = {}
-
-	with open(filename, 'r', encoding='utf-8') as fp:
-		for line in fp:
-			line = line.rstrip('\n')
-			if not line or line.startswith('#'):
-				continue
-			elif line.startswith('!'):
-				section = line[1:].lower()
-				lst[section] = Banlist(section)
-			else:
-				code, num_allowed, *extra = line.split(' ', 2)
-				code = int(code)
-				num_allowed = int(num_allowed)
-				lst[section].add(code, num_allowed)
-
-	return collections.OrderedDict(natsort.natsorted(lst.items(), reverse=True))
 
 def process_duel(d):
 	while d.started:
@@ -43,6 +20,7 @@ def process_duel(d):
 				d.keep_processing = False
 				continue
 			break
+
 
 def process_duel_replay(duel):
 	res = lib.process(duel.duel)
@@ -97,25 +75,4 @@ def parse_ints(text):
 def get_root_directory():
 	return os.path.dirname(os.path.abspath(sys.argv[0]))
 
-def forward_error():
-	
-	players = globals.server.get_all_players()
-	
-	players = [p for p in players if p.is_admin]
-
-	exc = traceback.format_exc()
-
-	for pl in players:
-	
-		pl.notify(pl._("A critical error was encountered."))
-		pl.notify(exc)
-
-def handle_error(f):
-	def catch(*args, **kwargs):
-		try:
-			return f(*args, **kwargs)
-		except Exception as e:
-			forward_error()
-			raise e
-	return catch
 

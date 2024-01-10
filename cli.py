@@ -17,21 +17,12 @@ from ygo import duel as dm
 from ygo import globals as glb
 from ygo.language_handler import LanguageHandler
 from ygo.duel_reader import DuelReader
-from ygo.duel_menu import DuelMenu
-from ygo.parsers.yes_or_no_parser import yes_or_no_parser
 from ygo.constants import LOCATION
 
 
-class Connection:
-    def __init__(self, pl):
-        self.player = pl
-        self.parser = None
-
-
 class Response:
-    def __init__(self, text, pl):
+    def __init__(self, text):
         self.text = text
-        self.connection = Connection(pl)
 
 
 class FakePlayer:
@@ -42,7 +33,6 @@ class FakePlayer:
         self.language = language
         self.seen_waiting = False
         self.soundpack = False
-        self.connection = Connection(self)
 
     _ = lambda self, t: t
 
@@ -50,7 +40,7 @@ class FakePlayer:
         if arg1 == DuelReader:
             func = args[0]
             chosen = input()
-            func(Response(chosen, self))
+            func(Response(chosen))
         else:
             print(self.duel_player, arg1)
 
@@ -70,17 +60,16 @@ class RandomAI(FakePlayer):
             func, options = args[0], args[1]
 
             msg = re.search(r'<function (\w+)\.<locals>\.', str(func)).group(1)
-            if msg == 'handle_error':
-                msg = "select_sum"
             self.statistic[msg] += 1
-            print(msg)
+            # print(msg)
                 # chosen = input()
             chosen = random.choice(options)
-            print(self.duel_player, "chose", chosen, "in", options)
-            caller = Response(chosen, self)
+            # print(self.duel_player, "chose", chosen, "in", options)
+            caller = Response(chosen)
             func(caller)
         else:
-            print(self.duel_player, arg1)
+            pass
+            # print(self.duel_player, arg1)
 
 
 # from ygo/utils.py
