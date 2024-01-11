@@ -1,7 +1,6 @@
 import io
 
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 
 
 def msg_select_place(duel: Duel, data):
@@ -11,11 +10,11 @@ def msg_select_place(duel: Duel, data):
 	count = duel.read_u8(data)
 	if count == 0: count = 1
 	flag = duel.read_u32(data)
-	duel.cm.call_callbacks('select_place', player, count, flag)
+	select_place(duel, player, count, flag)
 	return data.read()
 
 
-def select_place(duel: Duel, player, count, flag):
+def select_place(duel: Duel, player: int, count, flag):
 	pl = duel.players[player]
 	specs = duel.flag_to_usable_cardspecs(flag)
 	if count == 1:
@@ -27,13 +26,13 @@ def select_place(duel: Duel, player, count, flag):
 		values = caller.text.split()
 		if len(set(values)) != len(values):
 			pl.notify(pl._("Duplicate values not allowed."))
-			return pl.notify(DuelReader, r, specs)
+			return pl.notify(Decision, r, specs)
 		if len(values) != count:
 			pl.notify(pl._("Please enter %d values.") % count)
-			return pl.notify(DuelReader, r, specs)
+			return pl.notify(Decision, r, specs)
 		if any(value not in specs for value in values):
 			pl.notify(pl._("Invalid cardspec. Try again."))
-			return pl.notify(DuelReader, r, specs)
+			return pl.notify(Decision, r, specs)
 		resp = b''
 		for value in values:
 			l, s = duel.cardspec_to_ls(value)
@@ -44,7 +43,7 @@ def select_place(duel: Duel, player, count, flag):
 			resp += bytes([plr, l, s])
 		duel.set_responseb(resp)
 
-	pl.notify(DuelReader, r, specs)
+	pl.notify(Decision, r, specs)
 
 MESSAGES = {18: msg_select_place, 24: msg_select_place}
 

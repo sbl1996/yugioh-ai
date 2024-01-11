@@ -1,29 +1,33 @@
 import io
 
-def msg_win(self, data):
+from ygo.duel import Duel
+
+
+def msg_win(duel: Duel, data):
 	data = io.BytesIO(data[1:])
-	player = self.read_u8(data)
-	reason = self.read_u8(data)
-	self.cm.call_callbacks('win', player, reason)
+	player = duel.read_u8(data)
+	reason = duel.read_u8(data)
+	win(duel, player, reason)
 	return data.read()
 
-def win(self, player, reason):
+
+def win(duel: Duel, player, reason):
 	if player == 2:
-		self.room.announce_draw()
-		self.end()
+		duel.room.announce_draw()
+		duel.end()
 		return
 
-	winners = [self.players[player]]
-	losers = [self.players[1 - player]]
+	winners = [duel.players[player]]
+	losers = [duel.players[1 - player]]
 
-	l_reason = lambda p: p.strings['victory'][reason]
+	l_reason = duel.strings['victory'][reason]
 
 	for w in winners:
-		w.notify(w._("You won (%s).") % l_reason(w))
+		w.notify(w._("You won (%s).") % l_reason)
 	for l in losers:
-		l.notify(l._("You lost (%s).") % l_reason(l))
+		l.notify(l._("You lost (%s).") % l_reason)
 
-	self.end()
+	duel.end()
 
 MESSAGES = {5: msg_win}
 

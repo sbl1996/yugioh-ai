@@ -4,7 +4,7 @@ def msg_recover(self, data):
 	data = io.BytesIO(data[1:])
 	player = self.read_u8(data)
 	amount = self.read_u32(data)
-	self.cm.call_callbacks('recover', player, amount)
+	recover(self, player, amount)
 	return data.read()
 
 def recover(self, player, amount):

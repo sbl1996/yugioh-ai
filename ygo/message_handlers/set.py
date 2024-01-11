@@ -8,7 +8,7 @@ def msg_set(self, data):
 	loc = self.read_u32(data)
 	card = Card(code)
 	card.set_location(loc)
-	self.cm.call_callbacks('set', card)
+	set(self, card)
 	return data.read()
 
 def set(self, card):

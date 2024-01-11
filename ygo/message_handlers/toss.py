@@ -1,37 +1,40 @@
 import io
 
-def msg_toss_coin(self, data, dice=False):
+from ygo.duel import Duel
+
+
+def msg_toss_coin(duel: Duel, data, dice=False):
 	data = io.BytesIO(data[1:])
-	player = self.read_u8(data)
-	count = self.read_u8(data)
-	options = [self.read_u8(data) for i in range(count)]
+	player = duel.read_u8(data)
+	count = duel.read_u8(data)
+	options = [duel.read_u8(data) for i in range(count)]
 	if dice:
-		self.cm.call_callbacks('toss_dice', player, options)
+		toss_dice(duel, player, options)
 	else:
-		self.cm.call_callbacks('toss_coin', player, options)
+		toss_coin(duel, player, options)
 	return data.read()
 
-def toss_coin(self, player, options):
+def toss_coin(duel: Duel, player, options):
 	players = []
-	players.extend(self.players)
+	players.extend(duel.players)
 	for pl in players:
-		s = pl.strings['system'][1623] + " "
-		opts = [pl.strings['system'][60] if opt else pl.strings['system'][61] for opt in options]
+		s = duel.strings['system'][1623] + " "
+		opts = [duel.strings['system'][60] if opt else duel.strings['system'][61] for opt in options]
 		s += ", ".join(opts)
 		pl.notify(s)
 
-def toss_dice(self, player, options):
+def toss_dice(duel: Duel, player, options):
 	opts = [str(opt) for opt in options]
 	players = []
-	players.extend(self.players)
+	players.extend(duel.players)
 	for pl in players:
-		s = pl.strings['system'][1624] + " "
+		s = duel.strings['system'][1624] + " "
 		s += ", ".join(opts)
 		pl.notify(s)
 
-def msg_toss_dice(self, *args, **kwargs):
+def msg_toss_dice(duel: Duel, *args, **kwargs):
 	kwargs['dice'] = True
-	self.msg_toss_coin(*args, **kwargs)
+	duel.msg_toss_coin(*args, **kwargs)
 
 MESSAGES = {130: msg_toss_coin, 131: msg_toss_dice}
 

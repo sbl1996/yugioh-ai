@@ -1,8 +1,7 @@
-from ygo.duel_reader import DuelReader
-from ygo.duel import Duel
+from ygo.duel import Duel, Decision, Player
 
 
-def display_battle_menu(duel: Duel, pl):
+def display_battle_menu(duel: Duel, pl: Player):
     options = []
     aspecs = {}
     cspecs = {}
@@ -48,7 +47,7 @@ def display_battle_menu(duel: Duel, pl):
             return duel.display_battle_menu(pl)
 
     pl.notify(
-        DuelReader,
+        Decision,
         r,
         options,
     )

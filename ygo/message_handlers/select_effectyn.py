@@ -1,8 +1,7 @@
 import io
 
 from ygo.card import Card
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 
 
 def msg_select_effectyn(duel: Duel, data):
@@ -11,11 +10,11 @@ def msg_select_effectyn(duel: Duel, data):
     card = Card(duel.read_u32(data))
     card.set_location(duel.read_u32(data))
     desc = duel.read_u32(data)
-    duel.cm.call_callbacks("select_effectyn", player, card, desc)
+    select_effectyn(duel, player, card, desc)
     return data.read()
 
 
-def select_effectyn(duel: Duel, player, card, desc):
+def select_effectyn(duel: Duel, player: int, card, desc):
     pl = duel.players[player]
     spec = card.get_spec(pl)
     question = pl._("Do you want to use the effect from {card} in {spec}?").format(card=card.get_name(pl), spec=spec)
@@ -25,7 +24,7 @@ def select_effectyn(duel: Duel, player, card, desc):
 
     def prompt():
         pl.notify(question)
-        pl.notify(DuelReader, r, ['y', 'n'])
+        pl.notify(Decision, r, ['y', 'n'])
 
     def r(caller):
         if caller.text.lower().startswith('y'):

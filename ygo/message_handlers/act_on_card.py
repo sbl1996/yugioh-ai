@@ -1,5 +1,4 @@
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision, Player
 
 
 def act_on_card(duel: Duel, caller, card):
@@ -8,13 +7,7 @@ def act_on_card(duel: Duel, caller, card):
     if card in duel.idle_activate:
         card = duel.idle_activate[duel.idle_activate.index(card)]
 
-    def prompt(menu=True):
-        if not menu:
-            raise NotImplementedError
-            return pl.notify(
-                DuelReader,
-                action,
-            )
+    def prompt():
         options = []
         pl.notify(name)
         activate_count = duel.idle_activate.count(card)
@@ -49,10 +42,14 @@ def act_on_card(duel: Duel, caller, card):
         pl.notify("i: " + pl._("Show card info."))
         pl.notify("z: " + pl._("back."))
         pl.notify(
-            DuelReader,
+            Decision,
             action,
             options,
         )
+
+    def error(text):
+        pl.notify(text)
+        return prompt()
 
     def action(caller):
         if caller.text == "s" and card in duel.summonable:
@@ -67,7 +64,7 @@ def act_on_card(duel: Duel, caller, card):
             duel.set_responsei((duel.spsummon.index(card) << 16) + 1)
         elif caller.text == "i":
             duel.show_info(card, pl)
-            return prompt(False)
+            return prompt()
         elif caller.text == "z":
             return
         elif caller.text.startswith("v"):
@@ -78,9 +75,8 @@ def act_on_card(duel: Duel, caller, card):
                 or (len(caller.text) == 1 and activate_count > 1)
                 or (len(caller.text) == 2 and activate_count == 1)
             ):
-                pl.notify(pl._("Invalid action."))
-                prompt()
-                return
+                return error(pl._("Invalid action."))
+
             index = duel.idle_activate.index(card)
             if len(caller.text) == 2:
                 # parse the second letter
@@ -90,15 +86,11 @@ def act_on_card(duel: Duel, caller, card):
                     o = -1
                 ad = o - ord("a")
                 if not (0 <= ad <= 25) or ad >= activate_count:
-                    pl.notify(pl._("Invalid action."))
-                    prompt()
-                    return
+                    return error(pl._("Invalid action."))
                 index += ad
             duel.set_responsei((index << 16) + 5)
         else:
-            pl.notify(pl._("Invalid action."))
-            prompt()
-            return
+            return error(pl._("Invalid action."))
     prompt()
 
 METHODS = {"act_on_card": act_on_card}

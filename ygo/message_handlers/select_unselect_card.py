@@ -1,8 +1,7 @@
 import io
 
 from ygo.card import Card
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 
 
 def msg_select_unselect_card(duel: Duel, data):
@@ -28,10 +27,10 @@ def msg_select_unselect_card(duel: Duel, data):
         card = Card(code)
         card.set_location(loc)
         unselect_cards.append(card)
-    duel.cm.call_callbacks('select_unselect_card', player, finishable, cancelable, min, max, select_cards, unselect_cards)
+    select_unselect_card(duel, player, finishable, cancelable, min, max, select_cards, unselect_cards)
     return data.read()
 
-def select_unselect_card(duel: Duel, player, finishable, cancelable, min, max, select_cards, unselect_cards):
+def select_unselect_card(duel: Duel, player: int, finishable, cancelable, min, max, select_cards, unselect_cards):
     pl = duel.players[player]
     pl.card_list = select_cards + unselect_cards
 
@@ -76,7 +75,7 @@ def select_unselect_card(duel: Duel, player, finishable, cancelable, min, max, s
     for i in range(1, len(pl.card_list) + 1):
         options.append(str(i))        
 
-    pl.notify(DuelReader, f, options)
+    pl.notify(Decision, f, options)
 
     return prompt()
 

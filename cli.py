@@ -16,7 +16,6 @@ except AttributeError:
 from ygo import duel as dm
 from ygo import globals as glb
 from ygo.language_handler import LanguageHandler
-from ygo.duel_reader import DuelReader
 from ygo.constants import LOCATION
 
 
@@ -25,28 +24,21 @@ class Response:
         self.text = text
 
 
-class FakePlayer:
+class FakePlayer(dm.Player):
     def __init__(self, i, deck, language):
         self.deck = {"cards": deck}
         self.duel_player = i
         self.cdb = glb.db
-        self.language = language
         self.seen_waiting = False
         self.soundpack = False
 
-    _ = lambda self, t: t
-
     def notify(self, arg1, *args, **kwargs):
-        if arg1 == DuelReader:
+        if arg1 == dm.Decision:
             func = args[0]
             chosen = input()
             func(Response(chosen))
         else:
             print(self.duel_player, arg1)
-
-    @property
-    def strings(self):
-        return glb.language_handler.get_strings(self.language)
 
 
 class RandomAI(FakePlayer):
@@ -56,7 +48,7 @@ class RandomAI(FakePlayer):
         self.statistic = defaultdict(int)
 
     def notify(self, arg1, *args, **kwargs):
-        if arg1 == DuelReader:
+        if arg1 == dm.Decision:
             func, options = args[0], args[1]
 
             msg = re.search(r'<function (\w+)\.<locals>\.', str(func)).group(1)

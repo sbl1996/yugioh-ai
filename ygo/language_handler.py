@@ -147,6 +147,9 @@ class LanguageHandler:
 	def get_strings(self, lang):
 		return self.get_language(lang)['strings']
 
+	def get_string(self, text):
+		return self.languages[self.primary_language]['strings'][text]
+
 	# reloads all available languages
 	def reload(self):
 		backup_cards = self.all_primary_cards

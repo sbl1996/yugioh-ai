@@ -1,21 +1,23 @@
 import io
 
 from ygo.constants import LOCATION
+from ygo.duel import Duel
 
-def msg_flipsummoning(self, data):
+
+def msg_flipsummoning(duel: Duel, data):
 	data = io.BytesIO(data[1:])
-	code = self.read_u32(data)
-	location = self.read_u32(data)
+	code = duel.read_u32(data)
+	location = duel.read_u32(data)
 	c = location & 0xff
 	loc = LOCATION((location >> 8) & 0xff)
 	seq = (location >> 16) & 0xff
-	card = self.get_card(c, loc, seq)
-	self.cm.call_callbacks('flipsummoning', card)
+	card = duel.get_card(c, loc, seq)
+	flipsummoning(duel, card)
 	return data.read()
 
-def flipsummoning(self, card):
-	cpl = self.players[card.controller]
-	for pl in self.players:
+def flipsummoning(duel: Duel, card):
+	cpl = duel.players[card.controller]
+	for pl in duel.players:
 		spec = card.get_spec(pl)
 		pl.notify(pl._("{player} flip summons {card} ({spec}).")
 		.format(player=cpl.nickname, card=card.get_name(pl), spec=spec))

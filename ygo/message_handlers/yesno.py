@@ -1,19 +1,18 @@
 import io
 
 from ygo.card import Card
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 
 
 def msg_yesno(duel: Duel, data):
     data = io.BytesIO(data[1:])
     player = duel.read_u8(data)
     desc = duel.read_u32(data)
-    duel.cm.call_callbacks("yesno", player, desc)
+    yesno(duel, player, desc)
     return data.read()
 
 
-def yesno(duel: Duel, player, desc):
+def yesno(duel: Duel, player: int, desc):
     pl = duel.players[player]
     if desc > 10000:
         code = desc >> 4
@@ -23,12 +22,12 @@ def yesno(duel: Duel, player, desc):
             opt = pl._('Unknown question from %s. Yes or no?')%(card.get_name(pl))
     else:
         opt = "String %d" % desc
-        opt = pl.strings['system'].get(desc, opt)
+        opt = duel.strings['system'].get(desc, opt)
 
     def prompt():
         pl.notify(opt)
         pl.notify(pl._("Please enter y or n."))
-        pl.notify(DuelReader, r, ['y', 'n'])
+        pl.notify(Decision, r, ['y', 'n'])
 
     def r(caller):
         if caller.text.lower().startswith('y'):

@@ -5,8 +5,8 @@ from ygo.constants import PHASES
 
 def msg_new_phase(self, data):
 	data = io.BytesIO(data[1:])
-	phase = self.read_u16(data)
-	self.cm.call_callbacks('phase', phase)
+	phase_ = self.read_u16(data)
+	phase(self, phase_)
 	return data.read()
 
 

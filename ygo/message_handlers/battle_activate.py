@@ -1,8 +1,7 @@
-from ygo.duel_reader import DuelReader
-from ygo.duel import Duel
+from ygo.duel import Duel, Decision, Player
 
 
-def battle_activate(duel: Duel, pl):
+def battle_activate(duel: Duel, pl: Player):
 	pln = pl.duel_player
 	pl.notify(pl._("Select card to activate:"))
 
@@ -25,12 +24,12 @@ def battle_activate(duel: Duel, pl):
 			return
 		if caller.text not in specs:
 			pl.notify(pl._("Invalid cardspec. Retry."))
-			pl.notify(DuelReader, r, options)
+			pl.notify(Decision, r, options)
 			return
 		card = specs[caller.text]
 		seq = duel.activatable.index(card)
 		duel.set_responsei((seq << 16))
 	
-	pl.notify(DuelReader, r, options)
+	pl.notify(Decision, r, options)
 
 METHODS = {'battle_activate': battle_activate}

@@ -1,26 +1,32 @@
+from typing import List
+
 import io
 
 from ygo.card import Card
+from ygo.duel import Duel
 
-def msg_draw(self, data):
+
+def msg_draw(duel: Duel, data):
 	data = io.BytesIO(data[1:])
-	player = self.read_u8(data)
-	drawed = self.read_u8(data)
+	player = duel.read_u8(data)
+	drawed = duel.read_u8(data)
 	cards = []
 	for i in range(drawed):
-		c = self.read_u32(data)
+		c = duel.read_u32(data)
 		card = Card(c & 0x7fffffff)
 		cards.append(card)
-	self.cm.call_callbacks('draw', player, cards)
+	draw(duel, player, cards)
 	return data.read()
 
-def draw(self, player, cards):
-	pl = self.players[player]
+
+def draw(duel: Duel, player: int, cards: List[Card]):
+	pl = duel.players[player]
 	pl.notify(pl._("Drew %d cards:") % len(cards))
 	for i, c in enumerate(cards):
 		pl.notify("%d: %s" % (i+1, c.get_name(pl)))
-	op = self.players[1 - player]
+	op = duel.players[1 - player]
 	op.notify(op._("Opponent drew %d cards.") % len(cards))
+
 
 MESSAGES = {90: msg_draw}
 

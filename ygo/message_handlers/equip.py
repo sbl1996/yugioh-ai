@@ -1,20 +1,23 @@
 import io
 
-def msg_equip(self, data):
+from ygo.duel import Duel
+
+
+def msg_equip(duel: Duel, data):
 	data = io.BytesIO(data[1:])
-	loc = self.read_u32(data)
-	target = self.read_u32(data)
-	u = self.unpack_location(loc)
-	card = self.get_card(u[0], u[1], u[2])
-	u = self.unpack_location(target)
-	target = self.get_card(u[0], u[1], u[2])
-	self.cm.call_callbacks('equip', card, target)
+	loc = duel.read_u32(data)
+	target = duel.read_u32(data)
+	u = duel.unpack_location(loc)
+	card = duel.get_card(u[0], u[1], u[2])
+	u = duel.unpack_location(target)
+	target = duel.get_card(u[0], u[1], u[2])
+	equip(duel, card, target)
 	return data.read()
 
-def equip(self, card, target):
-	for pl in self.players:
-		c = self.cardlist_info_for_player(card, pl)
-		t = self.cardlist_info_for_player(target, pl)
+def equip(duel: Duel, card, target):
+	for pl in duel.players:
+		c = duel.cardlist_info_for_player(card, pl)
+		t = duel.cardlist_info_for_player(target, pl)
 		pl.notify(pl._("{card} equipped to {target}.")
 			.format(card=c, target=t))
 

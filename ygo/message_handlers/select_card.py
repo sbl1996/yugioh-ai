@@ -4,8 +4,7 @@ import io
 
 from ygo.card import Card
 from ygo.constants import LOCATION
-from ygo.duel_reader import DuelReader
-from ygo.duel import Duel
+from ygo.duel import Duel, Decision
 from ygo.utils import parse_ints
 
 
@@ -28,7 +27,7 @@ def msg_select_tribute(duel: Duel, data):
         ).position
         card.release_param = duel.read_u8(data)
         cards.append(card)
-    duel.cm.call_callbacks("select_tribute", player, cancelable, min, max, cards)
+    select_tribute(duel, player, cancelable, min, max, cards)
     return data.read()
 
 
@@ -46,12 +45,12 @@ def msg_select_card(duel: Duel, data):
         card = Card(code)
         card.set_location(loc)
         cards.append(card)
-    duel.cm.call_callbacks("select_card", player, cancelable, min, max, cards)
+    select_card(duel, player, cancelable, min, max, cards)
     return data.read()
 
 
 def select_card(
-    duel, player, cancelable, min_cards, max_cards, cards, is_tribute=False
+    duel: Duel, player: int, cancelable, min_cards, max_cards, cards, is_tribute=False
 ):
     pl = duel.players[player]
     pl.card_list = cards
@@ -75,7 +74,7 @@ def select_card(
         combs = []
         for t in range(min_cards, max_cards + 1):
             combs += [" ".join([ str(x) for x in comb]) for comb in combinations(options, t)]
-        pl.notify(DuelReader, f, combs)
+        pl.notify(Decision, f, combs)
 
     def error(text):
         pl.notify(text)
@@ -103,11 +102,9 @@ def select_card(
     return prompt()
 
 
-def select_tribute(duel, *args, **kwargs):
+def select_tribute(duel: Duel, *args, **kwargs):
     kwargs["is_tribute"] = True
-    duel.select_card(*args, **kwargs)
+    select_card(duel, *args, **kwargs)
 
 
 MESSAGES = {15: msg_select_card, 20: msg_select_tribute}
-
-CALLBACKS = {"select_card": select_card, "select_tribute": select_tribute}

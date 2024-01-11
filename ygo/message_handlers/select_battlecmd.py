@@ -7,7 +7,7 @@ def msg_select_battlecmd(self, data):
 	attackable = self.read_cardlist(data, True, True)
 	to_m2 = self.read_u8(data)
 	to_ep = self.read_u8(data)
-	self.cm.call_callbacks('select_battlecmd', player, activatable, attackable, to_m2, to_ep)
+	select_battlecmd(self, player, activatable, attackable, to_m2, to_ep)
 	return data.read()
 
 def select_battlecmd(self, player, activatable, attackable, to_m2, to_ep):

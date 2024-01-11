@@ -1,17 +1,20 @@
 import io
 
-def msg_lpupdate(self, data):
+from ygo.duel import Duel
+
+
+def msg_lpupdate(duel: Duel, data):
 	data = io.BytesIO(data[1:])
-	player = self.read_u8(data)
-	lp = self.read_u32(data)
-	self.cm.call_callbacks('lpupdate', player, lp)
+	player = duel.read_u8(data)
+	lp = duel.read_u32(data)
+	lpupdate(duel, player, lp)
 	return data.read()
 
-def lpupdate(self, player, lp):
-	if lp > self.lp[player]:
-		self.recover(player, lp - self.lp[player])
+def lpupdate(duel: Duel, player, lp):
+	if lp > duel.lp[player]:
+		duel.recover(player, lp - duel.lp[player])
 	else:
-		self.damage(player, self.lp[player] - lp)
+		duel.damage(player, duel.lp[player] - lp)
 
 MESSAGES = {94: msg_lpupdate}
 

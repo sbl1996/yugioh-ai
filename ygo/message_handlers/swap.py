@@ -15,8 +15,7 @@ def msg_swap(self, data):
 	card1.set_location(location1)
 	card2 = Card(code2)
 	card2.set_location(location2)
-	self.cm.call_callbacks('swap', card1, card2)
-
+	swap(self, card1, card2)
 	return data.read()
 
 def swap(self, card1, card2):

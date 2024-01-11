@@ -1,8 +1,7 @@
 import io
 
-from ygo.duel_reader import DuelReader
 from ygo import globals
-from ygo.duel import ffi, lib, card_reader_callback, Duel
+from ygo.duel import ffi, lib, card_reader_callback, Duel, Decision
 
 
 def msg_announce_card(duel: Duel, data):
@@ -12,11 +11,11 @@ def msg_announce_card(duel: Duel, data):
 	options = []
 	for i in range(size):
 		options.append(duel.read_u32(data))
-	duel.cm.call_callbacks('announce_card', player, options)
+	announce_card(duel, player, options)
 	return data.read()
 
 
-def announce_card(duel: Duel, player, options):
+def announce_card(duel: Duel, player: int, options):
 	pl = duel.players[player]
 	def prompt():
 		pl.notify(pl._("Enter the name of a card:"))
@@ -27,7 +26,7 @@ def announce_card(duel: Duel, player, options):
 					names.append(c.name)
 		else:
 			raise Exception("Unknown options: %r" % options)
-		return pl.notify(DuelReader, r, names, no_abort=pl._("Invalid command."))
+		return pl.notify(Decision, r, names, no_abort=pl._("Invalid command."))
 	def error(text):
 		pl.notify(text)
 		return prompt()

@@ -3,7 +3,7 @@ import io
 def msg_shuffle(self, data):
 	data = io.BytesIO(data[1:])
 	player = self.read_u8(data)
-	self.cm.call_callbacks('shuffle', player)
+	shuffle(self, player)
 	return data.read()
 
 def shuffle(self, player):

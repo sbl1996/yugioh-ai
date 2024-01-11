@@ -1,10 +1,8 @@
-from ygo.duel_reader import DuelReader
 from ygo.constants import TYPE
-from ygo.duel import Duel
+from ygo.duel import Duel, Decision, Player
 
 
-def battle_attack(duel: Duel, pl):
-    pln = pl.duel_player
+def battle_attack(duel: Duel, pl: Player):
     pl.notify(pl._("Select card to attack with:"))
     specs = {}
     for c in duel.attackable:
@@ -28,7 +26,7 @@ def battle_attack(duel: Duel, pl):
         duel.set_responsei((seq << 16) + 1)
 
     pl.notify(
-        DuelReader,
+        Decision,
         r,
         list(specs.keys()),
     )

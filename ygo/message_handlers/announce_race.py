@@ -2,31 +2,31 @@ import io
 import natsort
 
 from ygo.constants import AMOUNT_RACES, RACES_OFFSET
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 
 
-def msg_announce_race(self, data):
+def msg_announce_race(duel: Duel, data):
 	data = io.BytesIO(data[1:])
-	player = self.read_u8(data)
-	count = self.read_u8(data)
-	avail = self.read_u32(data)
-	self.cm.call_callbacks('announce_race', player, count, avail)
+	player = duel.read_u8(data)
+	count = duel.read_u8(data)
+	avail = duel.read_u32(data)
+	announce_race(duel, player, count, avail)
 	return data.read()
 
 
-def announce_race(self, player, count, avail):
-	pl = self.players[player]
-	racemap = {pl.strings['system'][RACES_OFFSET+i]: (1<<i) for i in range(AMOUNT_RACES)}
+def announce_race(duel: Duel, player: int, count, avail):
+	pl = duel.players[player]
+	racemap = {duel.strings['system'][RACES_OFFSET+i]: (1<<i) for i in range(AMOUNT_RACES)}
 	avail_races = {k: v for k, v in racemap.items() if avail & v}
 	avail_races_keys = natsort.natsorted(list(avail_races.keys()))
 	def prompt():
 		pl.notify("Type %d races separated by spaces." % count)
 		for i, s in enumerate(avail_races_keys):
 			pl.notify("%d: %s" % (i+1, s))
-		pl.notify(DuelReader, r)
+		pl.notify(Decision, r)
 	def error(text):
 		pl.notify(text)
-		pl.notify(DuelReader, r)
+		pl.notify(Decision, r)
 	def r(caller):
 		ints = []
 		try:
@@ -43,7 +43,7 @@ def announce_race(self, player, count, avail):
 		result = 0
 		for i in ints:
 			result |= avail_races[avail_races_keys[i]]
-		self.set_responsei(result)
+		duel.set_responsei(result)
 	prompt()
 
 MESSAGES = {140: msg_announce_race}

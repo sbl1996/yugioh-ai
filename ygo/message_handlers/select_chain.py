@@ -1,8 +1,7 @@
 import io
 
 from ygo.card import Card
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 
 
 def msg_select_chain(duel: Duel, data):
@@ -22,11 +21,11 @@ def msg_select_chain(duel: Duel, data):
 		card.set_location(loc)
 		desc = duel.read_u32(data)
 		chains.append((et, card, desc))
-	duel.cm.call_callbacks('select_chain', player, size, spe_count, forced, chains)
+	select_chain(duel, player, size, spe_count, forced, chains)
 	return data.read()
 
 
-def select_chain(duel: Duel, player, size, spe_count, forced, chains):
+def select_chain(duel: Duel, player: int, size, spe_count, forced, chains):
 	if size == 0 and spe_count == 0:
 		duel.keep_processing = True
 		duel.set_responsei(-1)
@@ -73,7 +72,7 @@ def select_chain(duel: Duel, player, size, spe_count, forced, chains):
 			options.append(spec)
 
 		pl.notify(
-			DuelReader,
+			Decision,
 			r,
 			options,
 		)

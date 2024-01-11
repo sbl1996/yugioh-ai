@@ -2,8 +2,7 @@ import io
 
 from ygo.card import Card
 from ygo.constants import LOCATION
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 from ygo.utils import parse_ints
 
 
@@ -18,17 +17,17 @@ def msg_sort_card(duel: Duel, data):
 		card.location = LOCATION(duel.read_u8(data))
 		card.sequence = duel.read_u8(data)
 		cards.append(card)
-	duel.cm.call_callbacks('sort_card', player, cards)
+	sort_card(duel, player, cards)
 	return data.read()
 
 
-def sort_card(duel: Duel, player, cards):
+def sort_card(duel: Duel, player: int, cards):
 	pl = duel.players[player]
 	def prompt():
 		pl.notify(pl._("Sort %d cards by entering numbers separated by spaces (c = cancel):") % len(cards))
 		for i, c in enumerate(cards):
 			pl.notify("%d: %s" % (i+1, c.get_name(pl)))
-		return pl.notify(DuelReader, r)
+		return pl.notify(Decision, r)
 	def error(text):
 		pl.notify(text)
 		return prompt()

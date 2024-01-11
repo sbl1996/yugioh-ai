@@ -16,7 +16,7 @@ def msg_sort_chain(self, data):
 		card.location = LOCATION(self.read_u8(data))
 		card.sequence = self.read_u8(data)
 		cards.append(card)
-	self.cm.call_callbacks('sort_chain', player, cards)
+	sort_chain(self, player, cards)
 	return data.read()
 
 

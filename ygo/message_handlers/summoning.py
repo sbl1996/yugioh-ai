@@ -11,7 +11,7 @@ def msg_summoning(self, data, special=False):
 	code = self.read_u32(data)
 	card = Card(code)
 	card.set_location(self.read_u32(data))
-	self.cm.call_callbacks('summoning', card, special=special)
+	summoning(self, card, special=special)
 	return data.read()
 
 def summoning(self, card, special=False):

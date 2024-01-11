@@ -1,2 +1,0 @@
-class DuelReader:
-	pass

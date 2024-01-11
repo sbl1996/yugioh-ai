@@ -3,8 +3,7 @@ import struct
 
 from ygo.card import Card
 from ygo.constants import LOCATION
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 from ygo.utils import parse_ints
 
 
@@ -22,7 +21,7 @@ def msg_select_counter(duel: Duel, data):
         card.sequence = duel.read_u8(data)
         card.counter = duel.read_u16(data)
         cards.append(card)
-    duel.cm.call_callbacks('select_counter', player, countertype, count, cards)
+    select_counter(duel, player, countertype, count, cards)
     return data.read()
 
 
@@ -64,9 +63,9 @@ def find_combinations(cards, expected_value, current_sum=0, current_combination=
     return combinations_found
 
 
-def select_counter(duel: Duel, player, countertype, count, cards):
+def select_counter(duel: Duel, player: int, countertype, count, cards):
     pl = duel.players[player]
-    counter_str = pl.strings['counter'][countertype]
+    counter_str = duel.strings['counter'][countertype]
     def prompt():
         pl.notify(pl._("Type new {counter} for {cards} cards, separated by spaces.")
             .format(counter=counter_str, cards=len(cards)))
@@ -74,7 +73,7 @@ def select_counter(duel: Duel, player, countertype, count, cards):
             pl.notify("%s (%d)" % (c.get_name(pl), c.counter))
         counters = [c.counter for c in cards]
         options = [ " ".join([str(x) for x in comb]) for comb in find_combinations(counters, count) ]
-        pl.notify(DuelReader, r, options)
+        pl.notify(Decision, r, options)
     def error(text):
         pl.notify(text)
         return prompt()

@@ -1,13 +1,14 @@
 import io
+from ygo.duel import Duel
 
-def msg_chain_solved(self, data):
+def msg_chain_solved(duel: Duel, data):
 	data = io.BytesIO(data[1:])
-	count = self.read_u8(data)
-	self.cm.call_callbacks('chain_solved', count)
+	count = duel.read_u8(data)
+	chain_solved(duel, count)
 	return data.read()
 
-def chain_solved(self, count):
-	self.revealed = {}
+def chain_solved(duel: Duel, count):
+	duel.revealed = {}
 
 MESSAGES = {73: msg_chain_solved}
 

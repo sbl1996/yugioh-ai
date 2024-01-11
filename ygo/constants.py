@@ -14,14 +14,14 @@ COMMAND_SUBSTITUTIONS = {
 }
 
 LINK_MARKERS = {
-	0o0001: __("bottom left"),
-	0o0002: __("bottom"),
-	0o0004: __("bottom right"),
-	0o0010: __("left"),
-	0o0040: __("right"),
-	0o0100: __("top left"),
-	0o0200: __("top"),
-	0o0400: __("top right")
+	0x001: __("bottom left"),
+	0x002: __("bottom"),
+	0x004: __("bottom right"),
+	0x008: __("left"),
+	0x020: __("right"),
+	0x040: __("top left"),
+	0x080: __("top"),
+	0x100: __("top right")
 }
 
 @unique
@@ -37,12 +37,14 @@ class LOCATION(IntFlag):
 	ONFIELD = MZONE | SZONE
 	FZONE = 0x100
 	PZONE = 0x200
+	DECKBOT = 0x10001		# Return to deck bottom
+	DECKSHF	= 0x20001		# Return to deck and shuffle
 
 PHASES = {
-	1: __('draw phase'),
-	2: __('standby phase'),
-	4: __('main1 phase'),
-	8: __('battle start phase'),
+	0x01: __('draw phase'),
+	0x02: __('standby phase'),
+	0x04: __('main1 phase'),
+	0x08: __('battle start phase'),
 	0x10: __('battle step phase'),
 	0x20: __('damage phase'),
 	0x40: __('damage calculation phase'),
@@ -63,9 +65,6 @@ class POSITION(IntFlag):
 	DEFENSE = FACEUP_DEFENSE | FACEDOWN_DEFENSE
 
 RACES_OFFSET = 1020
-
-RE_BANLIST = r"([0-9]+\.[0-9]+\.?[0-9]* ?[a-zA-Z]*)?"
-RE_NICKNAME = r'^([A-Za-z][a-zA-Z0-9]+)$'
 
 @unique
 class QUERY(IntFlag):
@@ -150,25 +149,19 @@ class REASON(IntFlag):
 	REPLACE = 0x1000000
 	DRAW = 0x2000000
 	REDIRECT = 0x4000000
+	REVEAL = 0x8000000
 	LINK = 0x10000000
-	
+	LOST_OVERLAY = 0x20000000
+	MAINTENANCE = 0x40000000
+	ACTION = 0x80000000
+	PROCEDURE = SYNCHRO | XYZ | LINK
+
+
 @unique
 class INFORM(Flag):
 	PLAYER = auto()
 	OPPONENT = auto()
-	TAG_PLAYER = auto()
-	TAG_OPPONENT = auto()
-	WATCHERS_PLAYER = auto()
-	WATCHERS_OPPONENT = auto()
-	WATCHERS = WATCHERS_PLAYER | WATCHERS_OPPONENT
-	PLAYERS = PLAYER | OPPONENT
-	TAG_PLAYERS = TAG_PLAYER | TAG_OPPONENT
-	ALL_PLAYERS = PLAYERS | TAG_PLAYERS
-	ALLIES = PLAYER | TAG_PLAYER | WATCHERS_PLAYER
-	OPPONENTS = OPPONENT | TAG_OPPONENT | WATCHERS_OPPONENT
-	NON_PLAYERS = TAG_PLAYERS | WATCHERS
-	ALL = ALL_PLAYERS | WATCHERS
-	OTHER = ALL ^ PLAYER
+	ALL = PLAYER | OPPONENT
 
 @unique
 class DECK(Flag):

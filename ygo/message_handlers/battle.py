@@ -1,33 +1,35 @@
 import io
 
 from ygo.constants import LOCATION, TYPE
+from ygo.duel import Duel
 
-def msg_battle(self, data):
+def msg_battle(duel: Duel, data):
 	data = io.BytesIO(data[1:])
-	attacker = self.read_u32(data)
-	aa = self.read_u32(data)
-	ad = self.read_u32(data)
-	bd0 = self.read_u8(data)
-	tloc = self.read_u32(data)
-	da = self.read_u32(data)
-	dd = self.read_u32(data)
-	bd1 = self.read_u8(data)
-	self.cm.call_callbacks('battle', attacker, aa, ad, bd0, tloc, da, dd, bd1)
+	attacker = duel.read_u32(data)
+	aa = duel.read_u32(data)
+	ad = duel.read_u32(data)
+	bd0 = duel.read_u8(data)
+	tloc = duel.read_u32(data)
+	da = duel.read_u32(data)
+	dd = duel.read_u32(data)
+	bd1 = duel.read_u8(data)
+	battle(duel, attacker, aa, ad, bd0, tloc, da, dd, bd1)
 	return data.read()
 
-def battle(self, attacker, aa, ad, bd0, tloc, da, dd, bd1):
+
+def battle(duel: Duel, attacker, aa, ad, bd0, tloc, da, dd, bd1):
 	loc = LOCATION((attacker >> 8) & 0xff)
 	seq = (attacker >> 16) & 0xff
 	c2 = attacker & 0xff
-	card = self.get_card(c2, loc, seq)
+	card = duel.get_card(c2, loc, seq)
 	tc = tloc & 0xff
 	tl = LOCATION((tloc >> 8) & 0xff)
 	tseq = (tloc >> 16) & 0xff
 	if tloc:
-		target = self.get_card(tc, tl, tseq)
+		target = duel.get_card(tc, tl, tseq)
 	else:
 		target = None
-	for pl in self.players:
+	for pl in duel.players:
 		if card.type & TYPE.LINK:
 			attacker_points = "%d"%aa
 		else:

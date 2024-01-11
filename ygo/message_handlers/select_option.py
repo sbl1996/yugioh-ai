@@ -1,8 +1,7 @@
 import io
 
 from ygo.card import Card
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 from ygo.utils import parse_ints
 
 
@@ -13,11 +12,11 @@ def msg_select_option(duel: Duel, data):
     options = []
     for i in range(size):
         options.append(duel.read_u32(data))
-    duel.cm.call_callbacks("select_option", player, options)
+    select_option(duel, player, options)
     return data.read()
 
 
-def select_option(duel: Duel, player, options):
+def select_option(duel: Duel, player: int, options):
     pl = duel.players[player]
 
     card = None
@@ -29,7 +28,7 @@ def select_option(duel: Duel, player, options):
             string = card.get_strings(pl)[opt & 0xf]
         else:
             string = pl._("Unknown option %d" % opt)
-            string = pl.strings['system'].get(opt, string)
+            string = duel.strings['system'].get(opt, string)
         opts.append(string)
 
     def prompt():
@@ -37,7 +36,7 @@ def select_option(duel: Duel, player, options):
         valid = [str(i + 1) for i in range(len(opts))]
         for i, opt in enumerate(opts):
             pl.notify("%d: %s" % (i + 1, opt))
-        pl.notify(DuelReader, r, valid)
+        pl.notify(Decision, r, valid)
 
     def error(text):
         pl.notify(text)

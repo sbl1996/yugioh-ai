@@ -4,7 +4,7 @@ def msg_pay_lpcost(self, data):
 	data = io.BytesIO(data[1:])
 	player = self.read_u8(data)
 	cost = self.read_u32(data)
-	self.cm.call_callbacks('pay_lpcost', player, cost)
+	pay_lpcost(self, player, cost)
 	return data.read()
 
 def pay_lpcost(self, player, cost):

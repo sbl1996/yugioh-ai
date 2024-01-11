@@ -1,6 +1,8 @@
 import io
 
 from ygo.card import Card
+from ygo.message_handlers.decktop import decktop
+
 
 def msg_tag_swap(self, data):
 	raise NotImplementedError("msg_tag_swap")
@@ -17,9 +19,9 @@ def msg_tag_swap(self, data):
 		self.read_u32(data)
 	for i in range(extra_deck_count):
 		self.read_u32(data)
-	self.cm.call_callbacks('tag_swap', player)
+	tag_swap(self, player)
 	if top_card > 0:
-		self.cm.call_callbacks('decktop', player, Card(top_card))
+		decktop(self, player, Card(top_card))
 	return data.read()
 
 def tag_swap(self, player):

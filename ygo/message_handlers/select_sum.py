@@ -4,8 +4,7 @@ import io
 
 from ygo.card import Card
 from ygo.constants import LOCATION
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 from ygo.utils import parse_ints, check_sum
 
 
@@ -38,7 +37,7 @@ def msg_select_sum(duel: Duel, data):
         param = duel.read_u32(data)
         card.param = (param & 0xff, param >> 16)
         select_some.append(card)
-    duel.cm.call_callbacks('select_sum', mode, player, val, select_min, select_max, must_select, select_some)
+    select_sum(duel, mode, player, val, select_min, select_max, must_select, select_some)
     return data.read()
 
 
@@ -109,7 +108,7 @@ def select_sum(duel: Duel, mode, player, val, select_min, select_max, must_selec
             pl.notify(pl._("%s must be selected, automatically selected.") % c.get_name(pl))
         for i, card in enumerate(select_some):
             pl.notify("%d: %s (%s)" % (i+1, card.get_name(pl), (' ' + pl._('or') + ' ').join([str(p) for p in card.param if p > 0])))
-        return pl.notify(DuelReader, r, options)
+        return pl.notify(Decision, r, options)
 
     def error(t):
         pl.notify(t)

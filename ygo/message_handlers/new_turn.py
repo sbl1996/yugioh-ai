@@ -1,13 +1,16 @@
-def msg_new_turn(self, data):
+from ygo.duel import Duel
+
+
+def msg_new_turn(duel: Duel, data):
 	tp = int(data[1])
-	self.cm.call_callbacks('new_turn', tp)
+	new_turn(duel, tp)
 	return data[2:]
 
-def new_turn(self, tp):
-	self.tp = tp
-	self.players[tp].notify(self.players[tp]._("Your turn."))
-	op = self.players[1 - tp]
-	op.notify(op._("%s's turn.") % self.players[tp].nickname)
+def new_turn(duel: Duel, tp):
+	duel.tp = tp
+	duel.players[tp].notify(duel.players[tp]._("Your turn."))
+	op = duel.players[1 - tp]
+	op.notify(op._("%s's turn.") % duel.players[tp].nickname)
 
 MESSAGES = {40: msg_new_turn}
 

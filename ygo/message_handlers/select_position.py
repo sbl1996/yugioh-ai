@@ -2,8 +2,7 @@ import io
 
 from ygo.card import Card
 from ygo.constants import POSITION
-from ygo.duel import Duel
-from ygo.duel_reader import DuelReader
+from ygo.duel import Duel, Decision
 from ygo.utils import parse_ints
 
 
@@ -13,11 +12,11 @@ def msg_select_position(duel: Duel, data):
     code = duel.read_u32(data)
     card = Card(code)
     positions = POSITION(duel.read_u8(data))
-    duel.cm.call_callbacks("select_position", player, card, positions)
+    select_position(duel, player, card, positions)
     return data.read()
 
 
-def select_position(duel: Duel, player, card, positions):
+def select_position(duel: Duel, player: int, card, positions):
     pl = duel.players[player]
     menus = [
         (POSITION.FACEUP_ATTACK, "Face-up attack", 1),
@@ -37,7 +36,7 @@ def select_position(duel: Duel, player, card, positions):
             name = menus[pi][1]
             options.append(str(i + 1))
             pl.notify("%d: %s" % (i + 1, name))
-        pl.notify(DuelReader, r, options)
+        pl.notify(Decision, r, options)
 
     def error(text):
         pl.notify(text)

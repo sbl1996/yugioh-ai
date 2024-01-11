@@ -12,7 +12,7 @@ def msg_pos_change(self, data):
 	card.sequence = self.read_u8(data)
 	prevpos = POSITION(self.read_u8(data))
 	card.position = POSITION(self.read_u8(data))
-	self.cm.call_callbacks('pos_change', card, prevpos)
+	pos_change(self, card, prevpos)
 	return data.read()
 
 def pos_change(self, card, prevpos):

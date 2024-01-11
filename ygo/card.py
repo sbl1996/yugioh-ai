@@ -76,7 +76,7 @@ class Card(object):
 				s = lstr[i-code*16].strip()
 				e = True
 		except IndexError:
-			s = pl.strings['system'].get(i, '')
+			s = globals.strings('system').get(i, '')
 			if s != '':
 				e = True
 
@@ -92,13 +92,13 @@ class Card(object):
 		t = str(self.type.value)
 		for i in range(len(TYPE)):
 			if self.type & (1 << i):
-				types.append(pl.strings['system'][1050+i])
+				types.append(globals.strings('system')[1050+i])
 		for i in range(AMOUNT_ATTRIBUTES):
 			if self.attribute & (1 << i):
-				types.append(pl.strings['system'][ATTRIBUTES_OFFSET+i])
+				types.append(globals.strings('system')[ATTRIBUTES_OFFSET+i])
 		for i in range(AMOUNT_RACES):
 			if self.race & (1 << i):
-				types.append(pl.strings['system'][RACES_OFFSET+i])
+				types.append(globals.strings('system')[RACES_OFFSET+i])
 
 		lst.append("%s (%s)" % (self.get_name(pl), ", ".join(types)))
 		if self.type & TYPE.MONSTER:
@@ -196,7 +196,7 @@ class Card(object):
 
 		def _get_text(i):
 			try:
-				text = pl.strings['setname'].get(i, '')
+				text = globals.strings('setname').get(i, '')
 
 				if not text:
 					return pl._('unknown')
