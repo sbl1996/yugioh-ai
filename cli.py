@@ -61,15 +61,14 @@ class RandomAI(FakePlayer):
 
             msg = re.search(r'<function (\w+)\.<locals>\.', str(func)).group(1)
             self.statistic[msg] += 1
-            # print(msg)
-                # chosen = input()
+            print(msg)
             chosen = random.choice(options)
-            # print(self.duel_player, "chose", chosen, "in", options)
+            print(self.duel_player, "chose", chosen, "in", options)
             caller = Response(chosen)
             func(caller)
         else:
-            pass
-            # print(self.duel_player, arg1)
+            # pass
+            print(self.duel_player, arg1)
 
 
 # from ygo/utils.py
