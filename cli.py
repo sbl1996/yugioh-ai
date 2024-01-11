@@ -5,13 +5,6 @@ import sqlite3
 import argparse
 import re
 from collections import defaultdict
-from _duel import ffi, lib
-
-try:
-    # needed on Python 3.7
-    re._pattern_type = re.Pattern
-except AttributeError:
-    pass
 
 from ygo import duel as dm
 from ygo import globals as glb
@@ -56,13 +49,6 @@ class RandomAI(FakePlayer):
             pass
             # print(self.duel_player, arg1)
 
-
-# from ygo/utils.py
-def process_duel(d):
-    while d.started:
-        res = d.process()
-        if res & 0x20000:
-            break
 
 def load_deck(fn):
     with open(fn) as f:
@@ -130,7 +116,7 @@ def main():
         for nickname, deck, type, lp in configs
     ]
 
-    for i in range(10):
+    for i in range(100):
         duel = dm.Duel()
         duel.verbose = False
         for i, player in enumerate(players):
