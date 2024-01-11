@@ -21,4 +21,4 @@ def field_disabled(duel: Duel, locations):
 
 MESSAGES = {56: msg_field_disabled}
 
-CALLBACKS = {'field_disabled': field_disabled}
+

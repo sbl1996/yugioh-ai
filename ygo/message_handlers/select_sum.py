@@ -168,4 +168,4 @@ def check(cards, acc):
 
 MESSAGES = {23: msg_select_sum}
 
-CALLBACKS = {'select_sum': select_sum}
+

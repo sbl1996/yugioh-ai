@@ -30,4 +30,4 @@ def draw(duel: Duel, player: int, cards: List[Card]):
 
 MESSAGES = {90: msg_draw}
 
-CALLBACKS = {'draw': draw}
+

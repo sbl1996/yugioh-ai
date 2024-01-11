@@ -38,4 +38,4 @@ def select_effectyn(duel: Duel, player: int, card, desc):
 
 MESSAGES = {12: msg_select_effectyn}
 
-CALLBACKS = {'select_effectyn': select_effectyn}
+

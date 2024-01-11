@@ -16,4 +16,4 @@ def pay_lpcost(self, player, cost):
 
 MESSAGES = {100: msg_pay_lpcost}
 
-CALLBACKS = {'pay_lpcost': pay_lpcost}
+

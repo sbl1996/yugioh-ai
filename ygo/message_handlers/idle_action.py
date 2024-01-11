@@ -25,17 +25,17 @@ def idle_action(duel: Duel, pl: Player):
             options,
         )
 
-    cards = []
-    for i in (0, 1):
-        for j in (
-            LOCATION.HAND,
-            LOCATION.MZONE,
-            LOCATION.SZONE,
-            LOCATION.GRAVE,
-            LOCATION.EXTRA,
-        ):
-            cards.extend(duel.get_cards_in_location(i, j))
-    specs = set(card.get_spec(duel.players[duel.tp]) for card in cards)
+    # cards = []
+    # for i in (0, 1):
+    #     for j in (
+    #         LOCATION.HAND,
+    #         LOCATION.MZONE,
+    #         LOCATION.SZONE,
+    #         LOCATION.GRAVE,
+    #         LOCATION.EXTRA,
+    #     ):
+    #         cards.extend(duel.get_cards_in_location(i, j))
+    # specs = set(card.get_spec(duel.players[duel.tp]) for card in cards)
 
     def r(caller):
         if caller.text == "b" and duel.to_bp:
@@ -52,10 +52,11 @@ def idle_action(duel: Duel, pl: Player):
                 no_abort=pl._("Invalid specifier. Retry."),
                 prompt=pl._("Select a card:"),
             )
-        if caller.text not in specs:
-            pl.notify(pl._("Invalid specifier. Retry."))
-            prompt()
-            return
+        # Expensive, cost 2/3 of the execution time
+        # if caller.text not in specs:
+        #     pl.notify(pl._("Invalid specifier. Retry."))
+        #     prompt()
+        #     return
         loc, seq = duel.cardspec_to_ls(caller.text)
 
         if caller.text.startswith("o"):

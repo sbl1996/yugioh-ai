@@ -42,5 +42,3 @@ def announce_attrib(duel: Duel, player: int, count, avail):
 	return prompt()
 
 MESSAGES = {141: msg_announce_attrib}
-
-CALLBACKS = {'announce_attrib': announce_attrib}

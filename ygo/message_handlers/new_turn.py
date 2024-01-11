@@ -14,5 +14,5 @@ def new_turn(duel: Duel, tp):
 
 MESSAGES = {40: msg_new_turn}
 
-CALLBACKS = {'new_turn': new_turn}
+
 

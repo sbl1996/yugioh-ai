@@ -92,4 +92,4 @@ def select_counter(duel: Duel, player: int, countertype, count, cards):
 
 MESSAGES = {22: msg_select_counter}
 
-CALLBACKS = {'select_counter': select_counter}
+

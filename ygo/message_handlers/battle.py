@@ -48,4 +48,4 @@ def battle(duel: Duel, attacker, aa, ad, bd0, tloc, da, dd, bd1):
 
 MESSAGES = {111: msg_battle}
 
-CALLBACKS = {'battle': battle}
+

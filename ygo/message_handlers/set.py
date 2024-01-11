@@ -23,4 +23,4 @@ def set(self, card):
 
 MESSAGES = {54: msg_set}
 
-CALLBACKS = {'set': set}
+

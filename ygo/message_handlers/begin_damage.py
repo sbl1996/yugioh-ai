@@ -10,4 +10,4 @@ def begin_damage(duel: Duel):
 
 MESSAGES = {113: msg_begin_damage}
 
-CALLBACKS = {'begin_damage': begin_damage}
+

@@ -82,4 +82,4 @@ def select_unselect_card(duel: Duel, player: int, finishable, cancelable, min, m
 
 MESSAGES = {26: msg_select_unselect_card}
 
-CALLBACKS = {'select_unselect_card': select_unselect_card}
+

@@ -99,4 +99,4 @@ def select_chain(duel: Duel, player: int, size, spe_count, forced, chains):
 
 MESSAGES = {16: msg_select_chain}
 
-CALLBACKS = {'select_chain': select_chain}
+

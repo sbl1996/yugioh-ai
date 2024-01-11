@@ -43,4 +43,4 @@ def attack(duel: Duel, ac, al, aseq, apos, tc, tl, tseq, tpos):
 
 MESSAGES = {110: msg_attack}
 
-CALLBACKS = {'attack': attack}
+

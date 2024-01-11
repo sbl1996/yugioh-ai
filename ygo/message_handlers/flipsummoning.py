@@ -24,4 +24,4 @@ def flipsummoning(duel: Duel, card):
 
 MESSAGES = {64: msg_flipsummoning}
 
-CALLBACKS = {'flipsummoning': flipsummoning}
+

@@ -32,4 +32,4 @@ def msg_summoning_special(self, *args, **kwargs):
 
 MESSAGES = {60: msg_summoning, 62: msg_summoning_special, 61: msg_summoned}
 
-CALLBACKS = {'summoning': summoning}
+

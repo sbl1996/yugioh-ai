@@ -38,4 +38,4 @@ def msg_toss_dice(duel: Duel, *args, **kwargs):
 
 MESSAGES = {130: msg_toss_coin, 131: msg_toss_dice}
 
-CALLBACKS = {'toss_coin': toss_coin, 'toss_dice': toss_dice}
+

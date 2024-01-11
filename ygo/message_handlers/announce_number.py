@@ -28,4 +28,4 @@ def announce_number(duel: Duel, player: int, opts):
 
 MESSAGES = {143: msg_announce_number}
 
-CALLBACKS = {'announce_number': announce_number}
+

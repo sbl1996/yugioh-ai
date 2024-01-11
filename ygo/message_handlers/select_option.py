@@ -59,4 +59,4 @@ def select_option(duel: Duel, player: int, options):
 
 MESSAGES = {14: msg_select_option}
 
-CALLBACKS = {'select_option': select_option}
+

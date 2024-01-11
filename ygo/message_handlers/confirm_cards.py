@@ -33,4 +33,4 @@ def confirm_cards(duel: Duel, player: int, cards):
 
 MESSAGES = {31: msg_confirm_cards}
 
-CALLBACKS = {'confirm_cards': confirm_cards}
+

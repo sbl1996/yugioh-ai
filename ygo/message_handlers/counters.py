@@ -28,4 +28,4 @@ def counters(duel: Duel, card, type, count, added):
 
 MESSAGES = {101: msg_counters, 102: msg_counters}
 
-CALLBACKS = {'counters': counters}
+

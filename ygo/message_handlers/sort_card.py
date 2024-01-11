@@ -47,4 +47,4 @@ def sort_card(duel: Duel, player: int, cards):
 
 MESSAGES = {25: msg_sort_card}
 
-CALLBACKS = {'sort_card': sort_card}
+

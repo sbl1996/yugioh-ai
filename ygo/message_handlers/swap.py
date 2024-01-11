@@ -28,4 +28,4 @@ def swap(self, card1, card2):
 
 MESSAGES = {55: msg_swap}
 
-CALLBACKS = {'swap': swap}
+

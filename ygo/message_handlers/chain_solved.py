@@ -12,4 +12,4 @@ def chain_solved(duel: Duel, count):
 
 MESSAGES = {73: msg_chain_solved}
 
-CALLBACKS = {'chain_solved': chain_solved}
+

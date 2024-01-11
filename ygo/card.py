@@ -38,20 +38,20 @@ class Card(object):
 
 	def get_name(self, pl):
 		name = self.name
-		row = pl.cdb.execute('select name from texts where id=?', (self.code,)).fetchone()
+		row = globals.db.execute('select name from texts where id=?', (self.code,)).fetchone()
 		if row:
 			return row[0]
 		return name
 
 	def get_desc(self, pl):
 		desc = self.desc
-		row = pl.cdb.execute('select desc from texts where id=?', (self.code,)).fetchone()
+		row = globals.db.execute('select desc from texts where id=?', (self.code,)).fetchone()
 		if row:	
 			return row[0]
 		return desc
 
 	def get_strings(self, pl, code=None):
-		row = pl.cdb.execute('select * from texts where id = ?', (code or self.code, )).fetchone()
+		row = globals.db.execute('select * from texts where id = ?', (code or self.code, )).fetchone()
 		if not row:
 			return self.strings
 		strings = []
@@ -115,13 +115,7 @@ class Card(object):
 
 		lst.append(pl._("Set: {set}").format(set = self.get_set(pl)))
 
-		if pl.soundpack:
-			lst.append("### card_text_follows")
-
 		lst.append(self.get_desc(pl))
-
-		if pl.soundpack:
-			lst.append("### card_text_finished")
 
 		try:
 

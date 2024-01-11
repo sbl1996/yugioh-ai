@@ -21,4 +21,4 @@ def damage(duel: Duel, player: int, amount):
 
 MESSAGES = {91: msg_damage}
 
-CALLBACKS = {'damage': damage}
+

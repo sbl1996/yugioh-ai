@@ -26,9 +26,10 @@ def card_hint(duel: Duel, card, type, value):
 			attributes = [duel.strings['system'][1010+i] for i in range(AMOUNT_ATTRIBUTES) if value & (1<<i)]
 			pl.notify(pl._("{spec} ({name}) selected {value}.").format(spec=card.get_spec(pl), name=card.get_name(pl), value=', '.join(attributes)))
 	else:
-		print("unhandled card hint type", type)
-		print("hint value", value)
+		if duel.verbose:
+			print("unhandled card hint type", type)
+			print("hint value", value)
 
 MESSAGES = {160: msg_card_hint}
 
-CALLBACKS = {'card_hint': card_hint}
+

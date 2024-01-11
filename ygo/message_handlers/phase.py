@@ -18,4 +18,3 @@ def phase(self, phase):
 
 MESSAGES = {41: msg_new_phase}
 
-CALLBACKS = {'phase': phase}

@@ -48,4 +48,4 @@ def announce_race(duel: Duel, player: int, count, avail):
 
 MESSAGES = {140: msg_announce_race}
 
-CALLBACKS = {'announce_race': announce_race}
+

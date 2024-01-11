@@ -55,4 +55,4 @@ def select_position(duel: Duel, player: int, card, positions):
 
 MESSAGES = {19: msg_select_position}
 
-CALLBACKS = {"select_position": select_position}
+

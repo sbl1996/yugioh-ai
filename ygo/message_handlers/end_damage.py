@@ -10,4 +10,4 @@ def end_damage(duel: Duel):
 
 MESSAGES = {114: msg_end_damage}
 
-CALLBACKS = {'end_damage': end_damage}
+

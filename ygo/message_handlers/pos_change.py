@@ -25,4 +25,4 @@ def pos_change(self, card, prevpos):
 
 MESSAGES = {53: msg_pos_change}
 
-CALLBACKS = {'pos_change': pos_change}
+

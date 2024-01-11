@@ -17,4 +17,4 @@ def recover(self, player, amount):
 
 MESSAGES = {92: msg_recover}
 
-CALLBACKS = {'recover': recover}
+

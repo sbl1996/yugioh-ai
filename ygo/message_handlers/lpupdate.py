@@ -18,4 +18,4 @@ def lpupdate(duel: Duel, player, lp):
 
 MESSAGES = {94: msg_lpupdate}
 
-CALLBACKS = {'lpupdate': lpupdate}
+

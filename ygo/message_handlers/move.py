@@ -123,11 +123,6 @@ def move(duel: Duel, code, location, newloc, reason):
 		)
 	elif card.location == LOCATION.DECK and cnew.location == LOCATION.SZONE and cnew.position != POSITION.FACEDOWN:
 		def fn(p):
-			if p.soundpack and cnew.type & TYPE.SPELL:
-				p.notify("### activate_spell")
-			elif p.soundpack and cnew.type & TYPE.TRAP:
-				p.notify("### activate_trap")
-
 			if p is pl:
 				return p._("Activating {0} ({1})").format(cnew.get_spec(p), cnew.get_name(p))
 			else:
@@ -149,4 +144,4 @@ def move(duel: Duel, code, location, newloc, reason):
 
 MESSAGES = {50: msg_move}
 
-CALLBACKS = {'move': move}
+

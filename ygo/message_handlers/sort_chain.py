@@ -26,4 +26,4 @@ def sort_chain(self, player, cards):
 
 MESSAGES = {21: msg_sort_chain}
 
-CALLBACKS = {'sort_chain': sort_chain}
+

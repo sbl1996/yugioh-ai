@@ -12,11 +12,6 @@ def msg_win(duel: Duel, data):
 
 
 def win(duel: Duel, player, reason):
-	if player == 2:
-		duel.room.announce_draw()
-		duel.end()
-		return
-
 	winners = [duel.players[player]]
 	losers = [duel.players[1 - player]]
 
@@ -31,4 +26,4 @@ def win(duel: Duel, player, reason):
 
 MESSAGES = {5: msg_win}
 
-CALLBACKS = {'win': win}
+

@@ -21,4 +21,4 @@ def select_battlecmd(self, player, activatable, attackable, to_m2, to_ep):
 
 MESSAGES = {10: msg_select_battlecmd}
 
-CALLBACKS = {'select_battlecmd': select_battlecmd}
+

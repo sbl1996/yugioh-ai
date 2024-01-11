@@ -43,4 +43,4 @@ def announce_card(duel: Duel, player: int, options):
 
 MESSAGES = {142: msg_announce_card}
 
-CALLBACKS = {'announce_card': announce_card}
+

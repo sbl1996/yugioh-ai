@@ -22,4 +22,4 @@ def hint(duel: Duel, msg, player: int, data):
 
 MESSAGES = {2: msg_hint}
 
-CALLBACKS = {'hint': hint}
+

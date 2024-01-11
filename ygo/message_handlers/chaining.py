@@ -24,20 +24,10 @@ def chaining(duel: Duel, card: Card, tc, tl, ts, desc, cs):
 	o = 1 - c
 	n = duel.players[c].nickname
 	duel.chaining_player = c
-	if card.type & TYPE.SPELL:
-		if duel.players[c].soundpack:
-			duel.players[c].notify("### activate_spell")
-		if duel.players[o].soundpack:
-			duel.players[o].notify("### activate_spell")
-	elif card.type & TYPE.TRAP:
-		if duel.players[c].soundpack:
-			duel.players[c].notify("### activate_trap")
-		if duel.players[o].soundpack:
-			duel.players[o].notify("### activate_trap")
 
 	duel.players[c].notify(duel.players[c]._("Activating {0} ({1})").format(card.get_spec(duel.players[c]), card.get_name(duel.players[c])))
 	duel.players[o].notify(duel.players[o]._("{0} activating {1} ({2})").format(n, card.get_spec(duel.players[o]), card.get_name(duel.players[o])))
 
 MESSAGES = {70: msg_chaining}
 
-CALLBACKS = {'chaining': chaining}
+

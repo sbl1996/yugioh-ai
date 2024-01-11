@@ -35,4 +35,4 @@ def idle(duel: Duel, summonable, spsummon, repos, idle_mset, idle_set, idle_acti
 
 MESSAGES = {11: msg_idlecmd}
 
-CALLBACKS = {'idle': idle}
+

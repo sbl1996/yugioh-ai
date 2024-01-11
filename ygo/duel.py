@@ -27,6 +27,24 @@ class Decision:
 
 class Player:
 
+    def __init__(self, cards, nickname, init_lp):
+        # immutable
+        self.cards = cards
+        self.nickname = nickname
+        self.init_lp = init_lp
+
+        # change for each duel
+        self.duel_player = None
+
+        # change during duel
+        self.seen_waiting = False
+        self.card_list = []     
+
+    def init_state(self):
+        self.duel_player = None
+        self.seen_waiting = False
+        self.card_list = []     
+
     _ = lambda self, t: t
 
     def notify(self, arg1, *args, **kwargs):
@@ -92,20 +110,37 @@ class Duel:
         self.started = False
         self.message_map = {}
         self.state = ''
-        self.cards = [None, None]
         self.revealed = {}
         self.bind_message_handlers()
         self.revealing = [False, False]
+        self.cards = [None, None]
         self.unique_cards = None
+        self.verbose = True
 
+    def build_unique_cards(self):
+        self.unique_cards = self.get_unique_cards()
 
+    def get_unique_cards(self):
+        card_codes = set()
+        unique_cards = []
+        for cs in self.cards:
+            for c in cs:
+                if c.code not in card_codes:
+                    card_codes.add(c.code)
+                    unique_cards.append(c)
+        return unique_cards
 
-    def set_player_info(self, player, lp):
-        self.lp[player] = lp
-        lib.set_player_info(self.duel, player, lp, 5, 1)
+    def set_player(self, i, player: Player, shuffle=True):
+        assert self.players[i] is None
+        self.lp[i] = player.init_lp
+        lib.set_player_info(self.duel, i, player.init_lp, 5, 1)
+        player.duel_player = i
+        self.players[i] = player
+        cards = self.load_deck(player, shuffle)
+        self.cards[i] = cards
 
     def load_deck(self, player, shuffle = True):
-        full_deck = player.deck['cards'][:]
+        full_deck = player.cards[:]
         c = []
         fusion = []
         xyz = []
@@ -147,25 +182,33 @@ class Duel:
         for tc in link:
             c.append(tc[0])
 
-        self.cards[player.duel_player] = c
         for sc in c[::-1]:
             lib.new_card(self.duel, sc, player.duel_player, player.duel_player, LOCATION.DECK.value, 0, POSITION.FACEDOWN_DEFENSE.value)
         return cards
 
-    def start(self, options):
+    def start(self, rules = 5):
+        # rules = 1, Traditional
+        # rules = 0, Default
+        # rules = 4, Link
+        # rules = 5, MR5
+        options = 0
+        options = ((rules & 0xFF) << 16) + (options & 0xFFFF)
         lib.start_duel(self.duel, options)
         self.started = True
         for i, pl in enumerate(self.players):
             pl.notify(pl._("Duel created. You are player %d.") % i)
             pl.notify(pl._("Type help dueling for a list of usable commands."))
 
-    def end(self, timeout=False):
+        while self.started:
+            res = self.process()
+            if res & 0x20000:
+                break
+
+    def end(self):
         lib.end_duel(self.duel)
         self.started = False
         for pl in self.players:
-            pl.duel = None
-            pl.duel_player = 0
-            pl.card_list = []
+            pl.init_state()
         self.duel = None
 
     def process(self):
@@ -182,7 +225,8 @@ class Duel:
             if fn:
                 data = fn(data)
             else:
-                print("msg %d unhandled" % msg)
+                if self.verbose:
+                    print("msg %d unhandled" % msg)
                 data = b''
         return data
 
@@ -323,7 +367,7 @@ class Duel:
         if n == 0:
             n = 1
         name = '%'+name+'%'
-        rows = pl.cdb.execute('select id from texts where name like ? limit ?', (name, n)).fetchall()
+        rows = globals.db.execute('select id from texts where name like ? limit ?', (name, n)).fetchall()
         if not rows:
             return
         nr = rows[min(n - 1, len(rows) - 1)]

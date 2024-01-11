@@ -51,4 +51,4 @@ def tag_swap(self, player):
 
 MESSAGES = {161: msg_tag_swap}
 
-CALLBACKS = {'tag_swap': tag_swap}
+

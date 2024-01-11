@@ -47,4 +47,4 @@ def select_place(duel: Duel, player: int, count, flag):
 
 MESSAGES = {18: msg_select_place, 24: msg_select_place}
 
-CALLBACKS = {'select_place': select_place}
+

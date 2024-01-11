@@ -41,4 +41,4 @@ def yesno(duel: Duel, player: int, desc):
 
 MESSAGES = {13: msg_yesno}
 
-CALLBACKS = {'yesno': yesno}
+

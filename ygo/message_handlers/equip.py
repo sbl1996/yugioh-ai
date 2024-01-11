@@ -23,4 +23,4 @@ def equip(duel: Duel, card, target):
 
 MESSAGES = {93: msg_equip}
 
-CALLBACKS = {'equip': equip}
+

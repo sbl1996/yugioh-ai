@@ -14,4 +14,4 @@ def shuffle(self, player):
 
 MESSAGES = {32: msg_shuffle}
 
-CALLBACKS = {'shuffle': shuffle}
+

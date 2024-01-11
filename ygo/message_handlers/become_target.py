@@ -31,4 +31,4 @@ def become_target(duel: Duel, tc, tl, tseq):
 
 MESSAGES = {83: msg_become_target}
 
-CALLBACKS = {'become_target': become_target}
+
