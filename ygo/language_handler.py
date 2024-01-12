@@ -84,7 +84,7 @@ class LanguageHandler:
 				line = line.rstrip('\n')
 				if not line.startswith('!') or line.startswith('!setcode'):
 					continue
-				type, id, s = line[1:].split(' ', 2)
+				type, id, s = line[1:].split(None, 2)
 				if id.startswith('0x'):
 					id = int(id, 16)
 				else:

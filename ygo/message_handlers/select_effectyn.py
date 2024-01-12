@@ -17,10 +17,26 @@ def msg_select_effectyn(duel: Duel, data):
 def select_effectyn(duel: Duel, player: int, card, desc):
     pl = duel.players[player]
     spec = card.get_spec(pl)
-    question = pl._("Do you want to use the effect from {card} in {spec}?").format(card=card.get_name(pl), spec=spec)
-    s = card.get_effect_description(pl, desc, True)
-    if s != '':
-        question += '\n'+s
+    card_name = card.get_name(pl)
+    # question = pl._("Do you want to use the effect from {card} in {spec}?").format(card=card_name, spec=spec)
+    if desc == 221:
+        s = duel.strings['system'].get(desc) % (spec, card_name)
+    elif desc == 0:
+        s = duel.strings['system'].get(200) % (spec, card_name)
+    elif desc < 2048:
+        s = duel.strings['system'].get(desc)
+        to_formats = s.count('[%ls]')
+        if to_formats == 0:
+            pass
+        elif s.count('[%ls]') == 1:
+            s = s % (card_name,)
+        else:
+            raise NotImplementedError("desc: %d, code: %d, string: %s" % (desc, card.code, s))
+    else:
+        raise NotImplementedError("desc: %d, code: %d" % (desc, card.code))
+        # s = card.get_effect_description(pl, desc, True)
+    # if s != '':
+    question = s
 
     def prompt():
         pl.notify(question)

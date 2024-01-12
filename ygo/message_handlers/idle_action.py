@@ -49,9 +49,22 @@ def idle_action(duel: Duel, pl: Player):
             return pl.notify(
                 Decision,
                 r,
-                no_abort=pl._("Invalid specifier. Retry."),
-                prompt=pl._("Select a card:"),
             )
+        elif caller.text in ["h", "hand"]:
+            duel.show_cards_in_location(pl, pl.duel_player, LOCATION.HAND, hide_facedown=False)
+            return prompt()
+        elif caller.text == 'hand2':
+            duel.show_cards_in_location(pl, 1 - pl.duel_player, LOCATION.HAND, hide_facedown=True)
+            return prompt()
+        elif caller.text == 'tab':
+            pl.notify(pl._("Your table:"))
+            duel.show_table(pl, pl.duel_player, hide_facedown=False)
+            return prompt()
+        elif caller.text == 'tab2':
+            pl.notify(pl._("Opponent's table:"))
+            duel.show_table(pl, 1 - pl.duel_player, hide_facedown=True)   
+            return prompt()
+
         # Expensive, cost 2/3 of the execution time
         # if caller.text not in specs:
         #     pl.notify(pl._("Invalid specifier. Retry."))

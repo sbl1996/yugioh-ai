@@ -1,6 +1,6 @@
 import io
 
-from ygo import globals
+from ygo.constants import OPCODE
 from ygo.duel import ffi, lib, card_reader_callback, Duel, Decision
 
 
@@ -19,11 +19,20 @@ def announce_card(duel: Duel, player: int, options):
 	pl = duel.players[player]
 	def prompt():
 		pl.notify(pl._("Enter the name of a card:"))
-		if len(options) == 3 and options[1] == 1073742082 and options[2] == 1073741831: # not is_type
+		if len(options) == 3 and options[1] == OPCODE.ISTYPE and options[2] == OPCODE.NOT:
 			names = []
 			for c in duel.unique_cards:
 				if not (c.type & options[0]):
 					names.append(c.name)
+		elif len(options) % 3 == 2 and options[1] == OPCODE.ISCODE:
+			codes = [options[0]]
+			if len(options) > 3:
+				if not (set(options[3::3]) == {OPCODE.ISCODE} and set(options[4::3]) == {OPCODE.OR}):
+					raise Exception("Unknown options: %r" % options)
+				codes += options[2::3]
+			names = []
+			for code in codes:
+				names.append(duel.unique_code2cards[code].name)
 		else:
 			raise Exception("Unknown options: %r" % options)
 		return pl.notify(Decision, r, names, no_abort=pl._("Invalid command."))

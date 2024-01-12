@@ -66,7 +66,7 @@ def act_on_card(duel: Duel, caller, card):
             duel.show_info(card, pl)
             return prompt()
         elif caller.text == "z":
-            return
+            return duel.idle_action(pl)
         elif caller.text.startswith("v"):
             activate_count = duel.idle_activate.count(card)
             if (

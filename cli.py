@@ -40,14 +40,15 @@ class RandomAI(FakePlayer):
 
             msg = re.search(r'<function (\w+)\.<locals>\.', str(func)).group(1)
             self.statistic[msg] += 1
-            # print(msg)
             chosen = random.choice(options)
-            # print(self.duel_player, "chose", chosen, "in", options)
+            if self.verbose:
+                print(msg)
+                print(self.duel_player, "chose", chosen, "in", options)
             caller = Response(chosen)
             func(caller)
         else:
-            pass
-            # print(self.duel_player, arg1)
+            if self.verbose:
+                print(self.duel_player, arg1)
 
 
 def load_deck(fn):
@@ -91,6 +92,8 @@ def main():
     parser.add_argument("--preload", help="path to preload script", type=str, default=None)
     parser.add_argument("--lang", help="language", type=str, default="english")
     parser.add_argument("--seed", help="random seed", type=int, default=None)
+    parser.add_argument("--verbose", help="verbose", action="store_true")
+    parser.add_argument("--repeat", help="the number of times to repeat the duel", type=int, default=1)
     args = parser.parse_args()
     if args.seed is None:
         args.seed = int(time.time())
@@ -116,9 +119,9 @@ def main():
         for nickname, deck, type, lp in configs
     ]
 
-    for i in range(100):
+    for i in range(args.repeat):
         duel = dm.Duel()
-        duel.verbose = False
+        duel.verbose = args.verbose
         for i, player in enumerate(players):
             duel.set_player(i, player)
         duel.build_unique_cards()
@@ -126,8 +129,8 @@ def main():
         duel.start()
 
         print(duel.lp)
-        # print(duel.players[0].statistic)
-        # print(duel.players[1].statistic)
+    # print(duel.players[0].statistic)
+    # print(duel.players[1].statistic)
 
 
 if __name__ == "__main__":

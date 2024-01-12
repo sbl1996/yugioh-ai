@@ -27,11 +27,12 @@ class Decision:
 
 class Player:
 
-    def __init__(self, cards, nickname, init_lp):
+    def __init__(self, cards, nickname, init_lp, verbose=True):
         # immutable
         self.cards = cards
         self.nickname = nickname
         self.init_lp = init_lp
+        self.verbose = verbose
 
         # change for each duel
         self.duel_player = None
@@ -119,6 +120,10 @@ class Duel:
 
     def build_unique_cards(self):
         self.unique_cards = self.get_unique_cards()
+        unique_code2cards = {}
+        for c in self.unique_cards:
+            unique_code2cards[c.code] = c
+        self.unique_code2cards = unique_code2cards
 
     def get_unique_cards(self):
         card_codes = set()
@@ -135,6 +140,7 @@ class Duel:
         self.lp[i] = player.init_lp
         lib.set_player_info(self.duel, i, player.init_lp, 5, 1)
         player.duel_player = i
+        player.verbose = self.verbose
         self.players[i] = player
         cards = self.load_deck(player, shuffle)
         self.cards[i] = cards
@@ -626,7 +632,7 @@ class Duel:
         if card.position & POSITION.FACEDOWN and (card.controller == opponent):
             pl.notify(pl._("%s: %s card.") % (cs, card.get_position(pl)))
             return
-        pl.notify(card.get_info(self))
+        pl.notify(card.get_info(pl))
 
     def show_info_cmd(self, pl, spec):
         cards = []
