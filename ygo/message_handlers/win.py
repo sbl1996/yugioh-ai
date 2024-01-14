@@ -17,6 +17,9 @@ def win(duel: Duel, player, reason):
 
 	l_reason = duel.strings['victory'][reason]
 
+	duel.winner = player
+	duel.win_reason = l_reason
+
 	for w in winners:
 		w.notify(w._("You won (%s).") % l_reason)
 	for l in losers:

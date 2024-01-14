@@ -68,8 +68,8 @@ def select_unselect_card(duel: Duel, player: int, finishable, cancelable, min, m
         duel.set_responseb(buf)
 
     options = []
-    if cancelable and not finishable:
-        options.append('c')
+    # if cancelable and not finishable:
+    #     options.append('c')
     if finishable:
         options.append('f')
     for i in range(1, len(pl.card_list) + 1):

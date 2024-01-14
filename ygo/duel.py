@@ -229,7 +229,7 @@ class Duel:
             msg = int(data[0])
             fn = self.message_map.get(msg)
             if fn:
-                data = fn(data)
+                data = fn(self, data)
             else:
                 if self.verbose:
                     print("msg %d unhandled" % msg)
@@ -398,8 +398,6 @@ class Duel:
 
         all_handlers = {}
 
-        all_methods = {}
-
         for importer, modname, ispkg in pkgutil.iter_modules(message_handlers.__path__):
             if not ispkg:
                 try:
@@ -408,23 +406,16 @@ class Duel:
                     handlers = m.__dict__.get('MESSAGES')
                     if type(handlers) is dict:
                         all_handlers.update(handlers)
-
-                    # additional methods we shell link?
-                    meths = m.__dict__.get('METHODS')
-                    if type(meths) is dict:
-                        all_methods.update(meths)
-
                 except Exception as e:
                     print("Error loading message handler", modname)
                     print(e)
 
         # link all those methods into this object
         for h in all_handlers.keys():
-            m = all_handlers[h].__get__(self)
-            setattr(self, all_handlers[h].__name__, m)
-            self.message_map[h] = m
-        for n in all_methods.keys():
-            setattr(self, n, all_methods[n].__get__(self))
+            # m = all_handlers[h].__get__(self)
+            # setattr(self, all_handlers[h].__name__, m)
+            # self.message_map[h] = m
+            self.message_map[h] = all_handlers[h]
 
     def get_usable(self, pl):
         summonable = [card.get_spec(pl) for card in self.summonable]

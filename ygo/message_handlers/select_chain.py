@@ -45,7 +45,7 @@ def select_chain(duel: Duel, player: int, size, spe_count, forced, chains):
 		cs = card.get_spec(pl)
 		chain_count = chain_cards.count(card)
 		if chain_count > 1:
-			cs += chr(ord('a')+list(specs.values()).count(card))
+			cs += chr(ord('a') + list(specs.values()).count(card))
 		specs[cs] = card
 		card.chain_spec = cs
 		card.effect_description = card.get_effect_description(pl, desc, True)

@@ -38,11 +38,34 @@ class RandomAI(FakePlayer):
         if arg1 == dm.Decision:
             func, options = args[0], args[1]
 
-            msg = re.search(r'<function (\w+)\.<locals>\.', str(func)).group(1)
-            self.statistic[msg] += 1
+            func_name = re.search(r'<function (\w+)\.<locals>\.', str(func)).group(1)
+            self.statistic[func_name] += 1
             chosen = random.choice(options)
             if self.verbose:
-                print(msg)
+                print(f"Action: {func_name}")
+                print(self.duel_player, "chose", chosen, "in", options)
+            caller = Response(chosen)
+            func(caller)
+        else:
+            if self.verbose:
+                print(self.duel_player, arg1)
+
+
+class GreedyAI(FakePlayer):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.statistic = defaultdict(int)
+
+    def notify(self, arg1, *args, **kwargs):
+        if arg1 == dm.Decision:
+            func, options = args[0], args[1]
+
+            func_name = re.search(r'<function (\w+)\.<locals>\.', str(func)).group(1)
+            self.statistic[func_name] += 1
+            chosen = options[0]
+            if self.verbose:
+                print(f"Action: {func_name}")
                 print(self.duel_player, "chose", chosen, "in", options)
             caller = Response(chosen)
             func(caller)
@@ -76,7 +99,8 @@ def show_duel(duel):
 def main():
     player_factory = {
         'manual': FakePlayer,
-        'random': RandomAI
+        'random': RandomAI,
+        'greedy': GreedyAI,
     }
     lang_short = {
         'english': 'en',
@@ -119,19 +143,28 @@ def main():
         for nickname, deck, type, lp in configs
     ]
 
+    results = [0, 0]
+    reasons = defaultdict(int)
+
     for i in range(args.repeat):
         duel = dm.Duel()
         duel.verbose = args.verbose
-        for i, player in enumerate(players):
-            duel.set_player(i, player)
+        for j, player in enumerate(players):
+            duel.set_player(j, player)
         duel.build_unique_cards()
 
         duel.start()
 
-        print(duel.lp)
-    # print(duel.players[0].statistic)
-    # print(duel.players[1].statistic)
+        results[duel.winner] += 1
+        reasons[duel.win_reason] += 1
 
+        # print(duel.lp)
+        # for i in range(2):
+        #     print(duel.players[i].statistic)
+        #     duel.players[i].statistic = defaultdict(int)
+        print([ r / (i + 1) for r in results], reasons)
+    print(results)
+    print(reasons)
 
 if __name__ == "__main__":
     main()

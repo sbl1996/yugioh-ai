@@ -63,8 +63,7 @@ def select_card(
             )
         else:
             pl.notify(
-                pl._("Select %d to %d cards separated by spaces:")
-                % (min_cards, max_cards)
+                pl._("Select %d to %d cards separated by spaces:") % (min_cards, max_cards)
             )
         options = []
         for i, c in enumerate(cards):

@@ -1,14 +1,10 @@
-setup: requirements ffi script locale/en/cards.cdb locale/zh/cards.cdb
+setup: py_setup script locale/en/cards.cdb locale/zh/cards.cdb
 
-requirements:
-	pip install -r requirements.txt
+py_setup:
+	pip install -e .
 
 script: vendor/ygopro-scripts
 	ln -s vendor/ygopro-scripts script
-
-ffi: libygo.so
-	python duel_build.py
-	rm _duel.cpp _duel.o
 
 libygo.so: vendor/lua-5.3.5/src/liblua.a vendor/ygopro-core
 	g++ -shared -fPIC -o $@ vendor/ygopro-core/*.cpp -Ivendor/lua-5.3.5/src -Lvendor/lua-5.3.5/src -llua -std=c++14

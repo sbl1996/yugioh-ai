@@ -2,21 +2,25 @@ import io
 
 from ygo.card import Card
 from ygo.constants import TYPE
+from ygo.duel import Duel
 
-def msg_summoned(self, data):
+
+def msg_summoned(duel: Duel, data):
 	return data[1:]
 
-def msg_summoning(self, data, special=False):
+
+def msg_summoning(duel: Duel, data, special=False):
 	data = io.BytesIO(data[1:])
-	code = self.read_u32(data)
+	code = duel.read_u32(data)
 	card = Card(code)
-	card.set_location(self.read_u32(data))
-	summoning(self, card, special=special)
+	card.set_location(duel.read_u32(data))
+	summoning(duel, card, special=special)
 	return data.read()
 
-def summoning(self, card, special=False):
-	nick = self.players[card.controller].nickname
-	for pl in self.players:
+
+def summoning(duel: Duel, card, special=False):
+	nick = duel.players[card.controller].nickname
+	for pl in duel.players:
 		pos = card.get_position(pl)
 		if special:
 			if card.type & TYPE.LINK:
@@ -26,9 +30,11 @@ def summoning(self, card, special=False):
 		else:
 			pl.notify(pl._("%s summoning %s (%d/%d) in %s position.") % (nick, card.get_name(pl), card.attack, card.defense, pos))
 
-def msg_summoning_special(self, *args, **kwargs):
+
+def msg_summoning_special(duel: Duel, *args, **kwargs):
 	kwargs['special'] = True
-	self.msg_summoning(*args, **kwargs)
+	msg_summoning(duel, *args, **kwargs)
+
 
 MESSAGES = {60: msg_summoning, 62: msg_summoning_special, 61: msg_summoned}
 
