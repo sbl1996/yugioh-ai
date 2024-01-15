@@ -157,7 +157,10 @@ class Card(object):
 			return pl._("face down")
 
 	def get_spec(self, pl):
-		player = pl.duel_player
+		if isinstance(pl, int):
+			player = pl
+		else:
+			player = pl.duel_player
 		s = ""
 		if self.controller != player:
 			s += "o"

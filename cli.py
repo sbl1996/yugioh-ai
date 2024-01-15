@@ -17,7 +17,7 @@ class Response:
         self.text = text
 
 
-class FakePlayer(dm.Player):
+class HumanPlayer(dm.Player):
 
     def notify(self, arg1, *args, **kwargs):
         if arg1 == dm.Decision:
@@ -28,7 +28,7 @@ class FakePlayer(dm.Player):
             print(self.duel_player, arg1)
 
 
-class RandomAI(FakePlayer):
+class RandomAI(dm.Player):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -51,7 +51,7 @@ class RandomAI(FakePlayer):
                 print(self.duel_player, arg1)
 
 
-class GreedyAI(FakePlayer):
+class GreedyAI(dm.Player):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -98,7 +98,7 @@ def show_duel(duel):
 
 def main():
     player_factory = {
-        'manual': FakePlayer,
+        'manual': HumanPlayer,
         'random': RandomAI,
         'greedy': GreedyAI,
     }

@@ -7,11 +7,6 @@ AMOUNT_RACES = 25
 
 ATTRIBUTES_OFFSET = 1010
 
-COMMAND_SUBSTITUTIONS = {
-	"'": "say",
-	".": "chat",
-	'"': "talk"
-}
 
 LINK_MARKERS = {
 	0x001: __("bottom left"),
@@ -40,6 +35,20 @@ class LOCATION(IntFlag):
 	DECKBOT = 0x10001		# Return to deck bottom
 	DECKSHF	= 0x20001		# Return to deck and shuffle
 
+location2str = {
+    LOCATION.DECK: 'Deck',
+    LOCATION.HAND: 'Hand',
+    LOCATION.MZONE: 'Main Monster Zone',
+    LOCATION.SZONE: 'Spell & Trap Zone',
+    LOCATION.GRAVE: 'Graveyard',
+    LOCATION.REMOVED: 'Banished',
+    LOCATION.EXTRA: 'Extra Deck',
+    LOCATION.FZONE: 'Field Zone',
+}
+
+all_locations = list(location2str.keys())
+
+
 PHASES = {
 	0x01: __('draw phase'),
 	0x02: __('standby phase'),
@@ -63,6 +72,21 @@ class POSITION(IntFlag):
 	FACEDOWN = FACEDOWN_ATTACK | FACEDOWN_DEFENSE
 	ATTACK = FACEUP_ATTACK | FACEDOWN_ATTACK
 	DEFENSE = FACEUP_DEFENSE | FACEDOWN_DEFENSE
+
+
+position2str = {
+	POSITION.FACEUP_ATTACK: "Face-up Attack",
+	POSITION.FACEDOWN_ATTACK: "Face-down Attack",
+	POSITION.FACEUP_DEFENSE: "Face-up Defense",
+	POSITION.FACEDOWN_DEFENSE: "Face-down Defense",
+	POSITION.FACEUP: "Face-up",
+	POSITION.FACEDOWN: "Face-down",
+	POSITION.ATTACK: "Attack",
+	POSITION.DEFENSE: "Defense",
+}
+
+all_positions = list(position2str.keys())
+
 
 RACES_OFFSET = 1020
 
@@ -121,6 +145,131 @@ class TYPE(IntFlag):
 	LINK = 0x4000000
 	# for this mud only
 	EXTRA = XYZ | SYNCHRO | FUSION | LINK
+
+
+type2str = {
+    TYPE.MONSTER: "Monster",
+    TYPE.SPELL: "Spell",
+    TYPE.TRAP: "Trap",
+    TYPE.NORMAL: "Normal",
+    TYPE.EFFECT: "Effect",
+    TYPE.FUSION: "Fusion",
+    TYPE.RITUAL: "Ritual",
+    TYPE.TRAPMONSTER: "Trap Monster",
+    TYPE.SPIRIT: "Spirit",
+    TYPE.UNION: "Union",
+    TYPE.DUAL: "Dual",
+    TYPE.TUNER: "Tuner",
+    TYPE.SYNCHRO: "Synchro",
+    TYPE.TOKEN: "Token",
+    TYPE.QUICKPLAY: "Quick-play",
+    TYPE.CONTINUOUS: "Continuous",
+    TYPE.EQUIP: "Equip",
+    TYPE.FIELD: "Field",
+    TYPE.COUNTER: "Counter",
+    TYPE.FLIP: "Flip",
+    TYPE.TOON: "Toon",
+    TYPE.XYZ: "XYZ",
+    TYPE.PENDULUM: "Pendulum",
+    TYPE.SPSUMMON: "Special",
+    TYPE.LINK: "Link"
+}
+
+all_types = list(type2str.keys())
+
+
+@unique
+class ATTRIBUTE(IntFlag):
+	ALL = 0x7f
+	NONE = 0x0  # Token
+	EARTH = 0x01
+	WATER = 0x02
+	FIRE = 0x04
+	WIND = 0x08
+	LIGHT = 0x10
+	DARK = 0x20
+	DEVINE = 0x40	
+
+
+attribute2str = {
+    ATTRIBUTE.ALL: 'All',
+    ATTRIBUTE.NONE: 'None',
+    ATTRIBUTE.EARTH: 'Earth',
+    ATTRIBUTE.WATER: 'Water',
+    ATTRIBUTE.FIRE: 'Fire',
+    ATTRIBUTE.WIND: 'Wind',
+    ATTRIBUTE.LIGHT: 'Light',
+    ATTRIBUTE.DARK: 'Dark',
+    ATTRIBUTE.DEVINE: 'Divine'
+}
+
+all_attributes = list(attribute2str.keys())
+
+
+@unique
+class RACE(IntFlag):
+	ALL = 0x3ffffff
+	NONE = 0x0  # Token
+	WARRIOR = 0x1
+	SPELLCASTER = 0x2
+	FAIRY = 0x4
+	FIEND = 0x8
+	ZOMBIE = 0x10
+	MACHINE = 0x20
+	AQUA = 0x40
+	PYRO = 0x80
+	ROCK = 0x100
+	WINDBEAST = 0x200
+	PLANT = 0x400
+	INSECT = 0x800
+	THUNDER = 0x1000
+	DRAGON = 0x2000
+	BEAST = 0x4000
+	BEASTWARRIOR = 0x8000
+	DINOSAUR = 0x10000
+	FISH = 0x20000
+	SEASERPENT = 0x40000
+	REPTILE = 0x80000
+	PSYCHO = 0x100000
+	DEVINE = 0x200000
+	CREATORGOD = 0x400000
+	WYRM = 0x800000
+	CYBERSE = 0x1000000
+	ILLUSION = 0x2000000
+
+
+race2str = {
+    RACE.NONE: "None",
+    RACE.WARRIOR: 'Warrior',
+    RACE.SPELLCASTER: 'Spellcaster',
+    RACE.FAIRY: 'Fairy',
+    RACE.FIEND: 'Fiend',
+    RACE.ZOMBIE: 'Zombie',
+    RACE.MACHINE: 'Machine',
+    RACE.AQUA: 'Aqua',
+    RACE.PYRO: 'Pyro',
+    RACE.ROCK: 'Rock',
+    RACE.WINDBEAST: 'Windbeast',
+    RACE.PLANT: 'Plant',
+    RACE.INSECT: 'Insect',
+    RACE.THUNDER: 'Thunder',
+    RACE.DRAGON: 'Dragon',
+    RACE.BEAST: 'Beast',
+    RACE.BEASTWARRIOR: 'Beast Warrior',
+    RACE.DINOSAUR: 'Dinosaur',
+    RACE.FISH: 'Fish',
+    RACE.SEASERPENT: 'Sea Serpent',
+    RACE.REPTILE: 'Reptile',
+    RACE.PSYCHO: 'Psycho',
+    RACE.DEVINE: 'Divine',
+    RACE.CREATORGOD: 'Creator God',
+    RACE.WYRM: 'Wyrm',
+    RACE.CYBERSE: 'Cyberse',
+    RACE.ILLUSION: 'Illusion'
+}
+
+all_races = list(race2str.keys())
+
 
 @unique
 class REASON(IntFlag):

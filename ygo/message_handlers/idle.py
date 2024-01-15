@@ -176,6 +176,11 @@ def idle_action(duel: Duel, pl: Player):
             pl.notify(pl._("Opponent's table:"))
             duel.show_table(pl, 1 - pl.duel_player, hide_facedown=True)   
             return prompt()
+        elif caller.text == 'g':
+            from ygo.llm import show_duel_state
+            show_duel_state(duel, pl.duel_player, False)
+            show_duel_state(duel, 1 - pl.duel_player, True)
+            return prompt()
 
         # Expensive, cost 2/3 of the execution time
         # if caller.text not in specs:
