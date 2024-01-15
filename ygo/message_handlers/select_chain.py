@@ -66,10 +66,10 @@ def select_chain(duel: Duel, player: int, size, spe_count, forced, chains):
 		# 	prompt = pl._("Select card to chain (c = cancel):")
 
 		options = []
-		if not forced:
-			options.append('c')
 		for spec in specs:
 			options.append(spec)
+		if not forced:
+			options.append('c')
 
 		pl.notify(
 			Decision,

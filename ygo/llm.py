@@ -102,7 +102,7 @@ class SpellCard(Card):
     def from_duel(cls, card: DuelCard):
         id = card.code
         name = card.name
-        desc = card.desc
+        desc = card.desc.replace("\r\n", "\\n")
         
         types = parse_types(int(card.type))
         position = parse_position(int(card.position))
@@ -189,6 +189,8 @@ def format_monster_card(card: MonsterCard, opponent=False):
     location = spec_to_location(spec)
     if not opponent:
         if location in [LOCATION.DECK, LOCATION.EXTRA, LOCATION.HAND, LOCATION.GRAVE, LOCATION.REMOVED]:
+            if location == LOCATION.DECK:
+                spec = "?"
             columns = [spec, name, typ, attribute, race, level, atk, def_, desc]
         elif location == LOCATION.MZONE:
             position = card.position
@@ -203,6 +205,14 @@ def format_monster_card(card: MonsterCard, opponent=False):
             spec = "o" + spec
             columns = [spec, name, typ, attribute, race, level, atk, def_, desc]
             return " | ".join(columns)
+        elif location in [LOCATION.MZONE]:
+            position = card.position
+            spec = "o" + spec
+            if position == position2str[POSITION.FACEDOWN_DEFENSE]:
+                columns = [spec, position, "?", "?", "?", "?", "?", "?", "?", "?"]
+            else:
+                columns = [spec, position, name, typ, attribute, race, level, atk, def_, desc]
+            return " | ".join(columns)
         else:
             raise ValueError("Invalid zone for monster card: " + location2str[location])
 
@@ -216,6 +226,8 @@ def format_spell_trap_card(card: Union[SpellCard, TrapCard], opponent=False):
     location = spec_to_location(spec)
     if not opponent:
         if location in [LOCATION.DECK, LOCATION.HAND, LOCATION.GRAVE, LOCATION.REMOVED]:
+            if location == LOCATION.DECK:
+                spec = "?"
             columns = [spec, name, typ, "-", "-", "-", "-", "-", desc]
             return " | ".join(columns)
         elif location == LOCATION.SZONE:
@@ -240,22 +252,22 @@ def format_spell_trap_card(card: Union[SpellCard, TrapCard], opponent=False):
             columns = [spec, name, typ, "-", "-", "-", "-", "-", desc]
             return " | ".join(columns)
         elif location == LOCATION.SZONE:
+            spec = "o" + spec
             position = card.position
-            if position == position2str[POSITION.FACE_DOWN]:
+            if position == position2str[POSITION.FACEDOWN]:
                 columns = [spec, position, "?", "?", "?", "?"]
             else:
                 equip_target = card.equip_target
                 if equip_target is None:
                     equip_target = "-"
-                spec = "o" + spec
                 columns = [spec, position, name, typ, desc, equip_target]
             return " | ".join(columns)
         elif location == LOCATION.FZONE:
+            spec = "o" + spec
             position = card.position
-            if position == position2str[POSITION.FACE_DOWN]:
+            if position == position2str[POSITION.FACEDOWN]:
                 columns = [spec, position, "?", "?", "?"]
             else:
-                spec = "o" + spec
                 columns = [spec, position, name, typ, desc]
             return " | ".join(columns)
         else:
@@ -293,7 +305,7 @@ def show_duel_state(duel: Duel, player: int, opponent=False):
     for name, location, columns, hide_for_opponent in [
         ("Deck", LOCATION.DECK, deck_columns, True),
         ("Extra Deck", LOCATION.EXTRA, extra_deck_columns, True),
-        ("Hand", LOCATION.GRAVE, hand_columns, True),
+        ("Hand", LOCATION.HAND, hand_columns, True),
         ("Main Monster Zone", LOCATION.MZONE, main_monster_zone_columns, False),
         ("Spell & Trap Zone", LOCATION.SZONE, spell_trap_zone_columns, False),
         # ("Field Zone", LOCATION.FZONE, field_zone_columns, False),

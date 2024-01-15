@@ -67,6 +67,10 @@ class GreedyAI(dm.Player):
             if self.verbose:
                 print(f"Action: {func_name}")
                 print(self.duel_player, "chose", chosen, "in", options)
+                if random.random() < 0.05:
+                    from ygo.llm import show_duel_state
+                    show_duel_state(self.duel, self.duel_player, opponent=False)
+                    show_duel_state(self.duel, 1 - self.duel_player, opponent=True)
             caller = Response(chosen)
             func(caller)
         else:
@@ -80,20 +84,6 @@ def load_deck(fn):
         noside = itertools.takewhile(lambda x: "side" not in x, lines)
         deck = [int(line) for line in  noside if line[:-1].isdigit()]
         return deck
-
-def show_duel(duel):
-    players = (0, 1)
-    cards = []
-    for i in players:
-        for j in (
-            LOCATION.HAND,
-            LOCATION.MZONE,
-            LOCATION.SZONE,
-            LOCATION.GRAVE,
-            LOCATION.EXTRA,
-        ):
-            cards.extend(duel.get_cards_in_location(i, j))
-    specs = set(card.get_spec(duel.players[duel.tp]) for card in cards)
 
 
 def main():
@@ -111,8 +101,8 @@ def main():
     parser.add_argument("--deck2", help="deck for player 2", type=str, required=True)
     parser.add_argument("--lp1", help="starting lp for player 1", type=int, default=8000)
     parser.add_argument("--lp2", help="starting lp for player 2", type=int, default=8000)
-    parser.add_argument("--p1", help="type of player 1", type=str, default='random', choices=player_factory.keys())
-    parser.add_argument("--p2", help="type of player 1", type=str, default='random', choices=player_factory.keys())
+    parser.add_argument("--p1", help="type of player 1", type=str, default='greedy', choices=player_factory.keys())
+    parser.add_argument("--p2", help="type of player 1", type=str, default='greedy', choices=player_factory.keys())
     parser.add_argument("--preload", help="path to preload script", type=str, default=None)
     parser.add_argument("--lang", help="language", type=str, default="english")
     parser.add_argument("--seed", help="random seed", type=int, default=None)
@@ -151,6 +141,7 @@ def main():
         duel.verbose = args.verbose
         for j, player in enumerate(players):
             duel.set_player(j, player)
+            player.duel = duel
         duel.build_unique_cards()
 
         duel.start()
@@ -158,10 +149,11 @@ def main():
         results[duel.winner] += 1
         reasons[duel.win_reason] += 1
 
-        # print(duel.lp)
-        # for i in range(2):
-        #     print(duel.players[i].statistic)
-        #     duel.players[i].statistic = defaultdict(int)
+        if duel.verbose:
+            print(duel.lp)
+            for i in range(2):
+                print(duel.players[i].statistic)
+                duel.players[i].statistic = defaultdict(int)
         print([ r / (i + 1) for r in results], reasons)
     print(results)
     print(reasons)
