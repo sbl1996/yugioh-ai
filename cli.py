@@ -9,7 +9,6 @@ from collections import defaultdict
 from ygo import duel as dm
 from ygo import globals as glb
 from ygo.language_handler import LanguageHandler
-from ygo.constants import LOCATION
 
 
 class Response:
@@ -67,10 +66,6 @@ class GreedyAI(dm.Player):
             if self.verbose:
                 print(f"Action: {func_name}")
                 print(self.duel_player, "chose", chosen, "in", options)
-                if random.random() < 0.05:
-                    from ygo.llm import show_duel_state
-                    show_duel_state(self.duel, self.duel_player, opponent=False)
-                    show_duel_state(self.duel, 1 - self.duel_player, opponent=True)
             caller = Response(chosen)
             func(caller)
         else:

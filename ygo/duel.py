@@ -19,7 +19,7 @@ import natsort
 from .card import Card
 from .constants import TYPE, LOCATION, POSITION, QUERY, INFORM
 from . import globals
-from . import message_handlers
+from . import message_handlers_a
 
 class Decision:
     pass
@@ -204,6 +204,10 @@ class Duel:
         for i, pl in enumerate(self.players):
             pl.notify(pl._("Duel created. You are player %d.") % i)
             pl.notify(pl._("Type help dueling for a list of usable commands."))
+
+        from ygo.llm import show_duel_state
+        show_duel_state(self, 0, opponent=False)
+        show_duel_state(self, 1, opponent=False)
 
         while self.started:
             res = self.process()
@@ -398,7 +402,7 @@ class Duel:
 
         all_handlers = {}
 
-        for importer, modname, ispkg in pkgutil.iter_modules(message_handlers.__path__):
+        for importer, modname, ispkg in pkgutil.iter_modules(message_handlers_a.__path__):
             if not ispkg:
                 try:
                     m = importer.find_module(modname).load_module(modname)
