@@ -1,15 +1,15 @@
 import io
 
 from ygo.card import Card
-from ygo.duel import Duel, Decision
+from ygo.duel import Duel, ActionRequired
 
 
 def msg_yesno(duel: Duel, data):
     data = io.BytesIO(data[1:])
     player = duel.read_u8(data)
     desc = duel.read_u32(data)
-    yesno(duel, player, desc)
-    return data.read()
+    options, r = yesno(duel, player, desc)
+    return ActionRequired("yesno", options, r, data.read())
 
 
 def yesno(duel: Duel, player: int, desc):
@@ -24,20 +24,19 @@ def yesno(duel: Duel, player: int, desc):
         opt = "String %d" % desc
         opt = duel.strings['system'].get(desc, opt)
 
-    def prompt():
-        pl.notify(opt)
-        pl.notify(pl._("Please enter y or n."))
-        pl.notify(Decision, r, ['y', 'n'])
-
     def r(caller):
         if caller.text.lower().startswith('y'):
             duel.set_responsei(1)
         elif caller.text.lower().startswith('n'):
             duel.set_responsei(0)
         else:
-            prompt()
+            raise ValueError("Invalid response")
 
-    prompt()
+    pl.notify(opt)
+    pl.notify(pl._("Please enter y or n."))
+    options = ['y', 'n']
+    return options, r
+
 
 MESSAGES = {13: msg_yesno}
 

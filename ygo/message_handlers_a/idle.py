@@ -1,7 +1,7 @@
 import io
 
-from ygo.duel import Duel, Decision, Player
-from ygo.constants import LOCATION, POSITION
+from ygo.duel import Duel, ActionRequired, Player
+from ygo.constants import POSITION
 
 
 def msg_idlecmd(duel: Duel, data):
@@ -20,8 +20,8 @@ def msg_idlecmd(duel: Duel, data):
 
     assert duel.tp == player
     pl = duel.players[duel.tp]
-    idle_action(duel, pl)
-    return data.read()
+    options, r = idle_action(duel, pl)
+    return ActionRequired("idle_action", options, r, data.read())
 
 
 def idle_action(duel: Duel, pl: Player):
@@ -67,11 +67,8 @@ def idle_action(duel: Duel, pl: Player):
             if not duel.to_bp:
                 options.append("e")
             pl.notify(pl._("e: End phase."))
-        pl.notify(
-            Decision,
-            r,
-            options,
-        )
+        return options, r
+
 
     def r(caller):
         if caller.text == "b" and duel.to_bp:
@@ -89,13 +86,10 @@ def idle_action(duel: Duel, pl: Player):
             plr = duel.tp
         card = duel.get_card(plr, loc, seq)
         if not card:
-            pl.notify(pl._("There is no card in that position."))
-            prompt()
-            return
+            raise ValueError("Invalid card: " + spec)
         if plr == 1 - duel.tp:
             if card.position & POSITION.FACEDOWN:
-                pl.notify(pl._("Face-down card."))
-                return prompt()
+                raise ValueError("Cannot select opponent's face-down card.")
 
         if act == "s" and card in duel.summonable:
             duel.set_responsei(duel.summonable.index(card) << 16)
@@ -114,10 +108,9 @@ def idle_action(duel: Duel, pl: Player):
             index = duel.idle_activate.index(card)
             duel.set_responsei((index << 16) + 5)
         else:
-            pl.notify(pl._("Invalid action."))
-            return prompt()
+            raise ValueError("Invalid action: " + act)
 
-    prompt()
+    return prompt()
 
 
 MESSAGES = {11: msg_idlecmd}

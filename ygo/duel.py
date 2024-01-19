@@ -25,6 +25,14 @@ class Decision:
     pass
 
 
+class ActionRequired:
+
+    def __init__(self, msg, options, callback, data):
+        self.msg = msg
+        self.options = options
+        self.callback = callback
+        self.data = data
+
 class Player:
 
     def __init__(self, cards, nickname, init_lp, verbose=True):
@@ -192,6 +200,23 @@ class Duel:
             lib.new_card(self.duel, sc, player.duel_player, player.duel_player, LOCATION.DECK.value, 0, POSITION.FACEDOWN_DEFENSE.value)
         return cards
 
+    def env_start(self, rules = 5):
+        # rules = 1, Traditional
+        # rules = 0, Default
+        # rules = 4, Link
+        # rules = 5, MR5
+        options = 0
+        options = ((rules & 0xFF) << 16) + (options & 0xFFFF)
+        lib.start_duel(self.duel, options)
+        self.started = True
+
+    
+    def lib_process(self):
+        res = lib.process(self.duel)
+        l = lib.get_message(self.duel, ffi.cast('byte *', self.buf))
+        data = ffi.unpack(self.buf, l)
+        return res, data
+
     def start(self, rules = 5):
         # rules = 1, Traditional
         # rules = 0, Default
@@ -205,9 +230,10 @@ class Duel:
             pl.notify(pl._("Duel created. You are player %d.") % i)
             pl.notify(pl._("Type help dueling for a list of usable commands."))
 
-        from ygo.llm import show_duel_state
-        show_duel_state(self, 0, opponent=False)
-        show_duel_state(self, 1, opponent=False)
+        if self.verbose:
+            from ygo.llm import show_duel_state
+            show_duel_state(self, 0, opponent=False)
+            show_duel_state(self, 1, opponent=False)
 
         while self.started:
             res = self.process()

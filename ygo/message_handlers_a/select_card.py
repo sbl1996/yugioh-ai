@@ -4,7 +4,7 @@ import io
 
 from ygo.card import Card
 from ygo.constants import LOCATION
-from ygo.duel import Duel, Decision
+from ygo.duel import Duel, ActionRequired
 from ygo.utils import parse_ints
 
 
@@ -27,8 +27,9 @@ def msg_select_tribute(duel: Duel, data):
         ).position
         card.release_param = duel.read_u8(data)
         cards.append(card)
-    select_tribute(duel, player, cancelable, min, max, cards)
-    return data.read()
+
+    options, r = select_tribute(duel, player, cancelable, min, max, cards)
+    return ActionRequired("select_tribute", options, r, data.read())
 
 
 def msg_select_card(duel: Duel, data):
@@ -45,8 +46,8 @@ def msg_select_card(duel: Duel, data):
         card = Card(code)
         card.set_location(loc)
         cards.append(card)
-    select_card(duel, player, cancelable, min, max, cards)
-    return data.read()
+    options, r = select_card(duel, player, cancelable, min, max, cards)
+    return ActionRequired("select_card", options, r, data.read())
 
 
 def select_card(
@@ -73,37 +74,30 @@ def select_card(
         combs = []
         for t in range(min_cards, max_cards + 1):
             combs += [" ".join([ str(x) for x in comb]) for comb in combinations(options, t)]
-        pl.notify(Decision, f, combs)
+        return combs, r
 
-    def error(text):
-        pl.notify(text)
-        return prompt()
-
-    def f(caller):
+    def r(caller):
         cds = [i - 1 for i in parse_ints(caller.text)]
         if len(cds) != len(set(cds)):
-            return error(pl._("Duplicate values not allowed."))
+            raise ValueError("Duplicate values not allowed.")
         if (not is_tribute and len(cds) < min_cards) or len(cds) > max_cards:
-            return error(
-                pl._("Please enter between %d and %d cards.") % (min_cards, max_cards)
-            )
+            raise ValueError("Invalid number of cards.")
         if cds and (min(cds) < 0 or max(cds) > len(cards) - 1):
-            return error(pl._("Invalid value."))
+            raise ValueError("Invalid card index.")
         buf = bytes([len(cds)])
         tribute_value = 0
         for i in cds:
             tribute_value += cards[i].release_param if is_tribute else 0
             buf += bytes([i])
         if is_tribute and tribute_value < min_cards:
-            return error(pl._("Not enough tributes."))
+            raise ValueError("Not enough tributes.")
         duel.set_responseb(buf)
-
     return prompt()
 
 
 def select_tribute(duel: Duel, *args, **kwargs):
     kwargs["is_tribute"] = True
-    select_card(duel, *args, **kwargs)
+    return select_card(duel, *args, **kwargs)
 
 
 MESSAGES = {15: msg_select_card, 20: msg_select_tribute}
