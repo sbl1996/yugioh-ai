@@ -1,3 +1,4 @@
+import itertools
 import collections
 import os.path
 import sys
@@ -48,6 +49,7 @@ def process_duel_replay(duel):
 	duel.cm.callbacks = cb
 	return data
 
+
 def check_sum(cards, acc):
 	if acc < 0:
 		return False
@@ -63,6 +65,7 @@ def check_sum(cards, acc):
 		res2 = False
 	return res1 or res2
 
+
 def parse_ints(text):
 	ints = []
 	try:
@@ -72,7 +75,14 @@ def parse_ints(text):
 		pass
 	return ints
 
+
 def get_root_directory():
-	return os.path.dirname(os.path.abspath(sys.argv[0]))
+	return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+def load_deck(fn):
+    with open(fn) as f:
+        lines = f.readlines()
+        noside = itertools.takewhile(lambda x: "side" not in x, lines)
+        deck = [int(line) for line in  noside if line[:-1].isdigit()]
+        return deck

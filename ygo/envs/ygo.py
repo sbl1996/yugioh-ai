@@ -1,10 +1,10 @@
-import itertools
 import numpy as np
 
 import gymnasium as gym
 from gymnasium import spaces
 
-from ygo import duel as dm
+from ygo.envs.duel import Player, Duel, ActionRequired, get_message_handler
+from ygo.utils import load_deck
 
 
 class Response:
@@ -12,19 +12,11 @@ class Response:
         self.text = text
 
 
-class FakePlayer(dm.Player):
+class FakePlayer(Player):
 
     def notify(self, arg1, *args, **kwargs):
         if self.verbose:
             print(self.duel_player, arg1)
-
-
-def load_deck(fn):
-    with open(fn) as f:
-        lines = f.readlines()
-        noside = itertools.takewhile(lambda x: "side" not in x, lines)
-        deck = [int(line) for line in  noside if line[:-1].isdigit()]
-        return deck
     
 
 class YGOEnv(gym.Env):
@@ -56,8 +48,11 @@ class YGOEnv(gym.Env):
         return {"agent": agent_location, "target": target_location}
 
     def _get_info(self):
+        options = None
+        if self._action_required:
+            options = self._action_required.options
         return {
-            "options": self._action_required.options,
+            "options": options,
         }
 
     def reset(self, seed=None, options=None):
@@ -67,7 +62,7 @@ class YGOEnv(gym.Env):
             ["Alice", self.deck1, 8000],
             ["Bob", self.deck2, 8000],
         ]
-        self.players = [
+        players = [
             FakePlayer(deck, nickname, lp)
             for nickname, deck, lp in configs
         ]
@@ -76,14 +71,8 @@ class YGOEnv(gym.Env):
         self._res = None
         self._terminated = False
 
-        self.duel = dm.Duel()
-        self.duel.verbose = self.verbose
-        for j, player in enumerate(self.players):
-            self.duel.set_player(j, player)
-            player.duel = self.duel
-        self.duel.build_unique_cards()
-
-        self.duel.env_start()
+        self.duel = Duel()
+        self.duel.init(players)
 
         self.next(process_first=True)
 
@@ -103,10 +92,10 @@ class YGOEnv(gym.Env):
                 skip_process = False
             while data:
                 msg = int(data[0])
-                fn = self.duel.message_map.get(msg)
+                fn = get_message_handler(msg)
                 if fn:
                     ret = fn(self.duel, data)
-                    if isinstance(ret, dm.ActionRequired):
+                    if isinstance(ret, ActionRequired):
                         if self.duel.tp == self._player:
                             self._action_required = ret
                             return
@@ -123,6 +112,7 @@ class YGOEnv(gym.Env):
             if self.res & 0x20000:
                 break
         self._terminated = True
+        self._action_required = None
 
     def step(self, action):
         if self._terminated:

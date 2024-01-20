@@ -1,5 +1,6 @@
 _duel.cpp
 script
+scratch
 expansions
 locale/*.cdb
 locale/*/*.cdb
