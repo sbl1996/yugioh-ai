@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.duel import Duel
@@ -15,12 +16,14 @@ def msg_equip(duel: Duel, data):
 	return data.read()
 
 def equip(duel: Duel, card, target):
+	if not duel.verbose:
+		return
 	for pl in duel.players:
 		c = duel.cardlist_info_for_player(card, pl)
 		t = duel.cardlist_info_for_player(target, pl)
 		pl.notify(pl._("{card} equipped to {target}.")
 			.format(card=c, target=t))
 
-MESSAGES = {93: msg_equip}
+register_message({93: msg_equip})
 
 

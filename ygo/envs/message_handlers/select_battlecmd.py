@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.constants import TYPE
@@ -21,30 +22,35 @@ def select_battlecmd(duel: Duel, pl: Player):
     options = []
     specs = {}
     specs = {}
-    pl.notify(pl._("Battle menu:"))
+    if duel.verbose:
+        pl.notify(pl._("Battle menu:"))
     for c in duel.attackable:
         spec = c.get_spec(pl)
-        if c.type & TYPE.LINK:
-            pl.notify(pl._("attack %s: %s (%d)") % (spec, c.get_name(), c.attack))
-        else:
-            pl.notify("attack %s: %s (%d/%d)" % (spec, c.get_name(), c.attack, c.defense))
+        if duel.verbose:
+            if c.type & TYPE.LINK:
+                pl.notify(pl._("attack %s: %s (%d)") % (spec, c.get_name(), c.attack))
+            else:
+                pl.notify("attack %s: %s (%d/%d)" % (spec, c.get_name(), c.attack, c.defense))
         option = "a " + spec
         specs[option] = c
         options.append(option)
     if duel.activatable:
         spec = c.get_spec(pl)
-        pl.notify("activate %s: %s (%d/%d)" % (spec, c.get_name(), c.attack, c.defense))
+        if duel.verbose:
+            pl.notify("activate %s: %s (%d/%d)" % (spec, c.get_name(), c.attack, c.defense))
         option = "c " + spec
         specs[option] = c
         options.append(option)
     if duel.to_m2:
         options.append("m")
-        pl.notify(pl._("m: Main phase 2."))
+        if duel.verbose:
+            pl.notify(pl._("m: Main phase 2."))
     if duel.to_ep:
         # always go to m2 if possible
         # if not duel.to_m2:
         options.append("e")
-        pl.notify(pl._("e: End phase."))
+        if duel.verbose:
+            pl.notify(pl._("e: End phase."))
 
     def r(caller):
         if caller.text in specs:
@@ -64,4 +70,4 @@ def select_battlecmd(duel: Duel, pl: Player):
     return options, r
 
 
-MESSAGES = {10: msg_select_battlecmd}
+register_message({10: msg_select_battlecmd})

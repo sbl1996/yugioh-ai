@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -35,6 +36,8 @@ def msg_decktop(duel: Duel, data):
 
 
 def decktop(duel: Duel, player: int, card: Card):
+	if not duel.verbose:
+		return
 	player = duel.players[player]
 	for pl in duel.players:
 		if pl is player:
@@ -44,6 +47,8 @@ def decktop(duel: Duel, player: int, card: Card):
 
 
 def confirm_decktop(duel: Duel, player: int, cards):
+	if not duel.verbose:
+		return
 	player = duel.players[player]
 	for pl in duel.players:
 		if pl is player:
@@ -53,4 +58,4 @@ def confirm_decktop(duel: Duel, player: int, cards):
 		for i, c in enumerate(cards):
 			pl.notify("%d: %s"%(i+1, c.get_name()))
 
-MESSAGES = {38: msg_decktop, 30: msg_confirm_decktop}
+register_message({38: msg_decktop, 30: msg_confirm_decktop})

@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.constants import LOCATION
@@ -18,6 +19,8 @@ def msg_counters(duel: Duel, data):
 
 
 def counters(duel: Duel, card, type, count, added):
+    if not duel.verbose:
+        return
     for pl in duel.players:
         stype = duel.strings['counter'].get(type, 'Counter %d' % type)
         if added:
@@ -26,6 +29,6 @@ def counters(duel: Duel, card, type, count, added):
              pl.notify(pl._("{amount} counters of type {counter} removed from {card}").format(amount=count, counter=stype, card=card.get_name()))
 
 
-MESSAGES = {101: msg_counters, 102: msg_counters}
+register_message({101: msg_counters, 102: msg_counters})
 
 

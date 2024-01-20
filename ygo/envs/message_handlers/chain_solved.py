@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 from ygo.envs.duel import Duel
 
@@ -10,6 +11,6 @@ def msg_chain_solved(duel: Duel, data):
 def chain_solved(duel: Duel, count):
 	duel.revealed = {}
 
-MESSAGES = {73: msg_chain_solved}
+register_message({73: msg_chain_solved})
 
 

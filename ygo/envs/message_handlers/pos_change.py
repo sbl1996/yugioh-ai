@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -16,6 +17,8 @@ def msg_pos_change(self, data):
 	return data.read()
 
 def pos_change(self, card, prevpos):
+	if not self.verbose:
+		return
 	cpl = self.players[card.controller]
 	op = self.players[1 - card.controller]
 	cs = card.get_spec(cpl)
@@ -23,6 +26,6 @@ def pos_change(self, card, prevpos):
 	cpl.notify(cpl._("The position of card %s (%s) was changed to %s.") % (cs, card.get_name(), card.get_position(cpl)))
 	op.notify(op._("The position of card %s (%s) was changed to %s.") % (cso, card.get_name(), card.get_position(op)))
 
-MESSAGES = {53: msg_pos_change}
+register_message({53: msg_pos_change})
 
 

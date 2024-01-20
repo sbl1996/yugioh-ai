@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -13,16 +14,19 @@ def msg_yesno(duel: Duel, data):
 
 
 def yesno(duel: Duel, player: int, desc):
-    pl = duel.players[player]
-    if desc > 10000:
-        code = desc >> 4
-        card = Card(code)
-        opt = card.get_strings()[desc & 0xf]
-        if opt == '':
-            opt = pl._('Unknown question from %s. Yes or no?')%(card.get_name())
-    else:
-        opt = "String %d" % desc
-        opt = duel.strings['system'].get(desc, opt)
+    if duel.verbose:
+        pl = duel.players[player]
+        if desc > 10000:
+            code = desc >> 4
+            card = Card(code)
+            opt = card.get_strings()[desc & 0xf]
+            if opt == '':
+                opt = pl._('Unknown question from %s. Yes or no?')%(card.get_name())
+        else:
+            opt = "String %d" % desc
+            opt = duel.strings['system'].get(desc, opt)
+        pl.notify(opt)
+        pl.notify(pl._("Please enter y or n."))
 
     def r(caller):
         if caller.text.lower().startswith('y'):
@@ -32,12 +36,10 @@ def yesno(duel: Duel, player: int, desc):
         else:
             raise ValueError("Invalid response")
 
-    pl.notify(opt)
-    pl.notify(pl._("Please enter y or n."))
     options = ['y', 'n']
     return options, r
 
 
-MESSAGES = {13: msg_yesno}
+register_message({13: msg_yesno})
 
 

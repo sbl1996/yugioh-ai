@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 from typing import List
 
 import io
@@ -20,6 +21,8 @@ def msg_draw(duel: Duel, data):
 
 
 def draw(duel: Duel, player: int, cards: List[Card]):
+	if not duel.verbose:
+		return
 	pl = duel.players[player]
 	pl.notify(pl._("Drew %d cards:") % len(cards))
 	for i, c in enumerate(cards):
@@ -28,6 +31,6 @@ def draw(duel: Duel, player: int, cards: List[Card]):
 	op.notify(op._("Opponent drew %d cards.") % len(cards))
 
 
-MESSAGES = {90: msg_draw}
+register_message({90: msg_draw})
 
 

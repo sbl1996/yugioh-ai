@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -15,31 +16,33 @@ def msg_select_effectyn(duel: Duel, data):
 
 
 def select_effectyn(duel: Duel, player: int, card, desc):
-    pl = duel.players[player]
-    spec = card.get_spec(pl)
-    card_name = card.get_name()
-    # question = pl._("Do you want to use the effect from {card} in {spec}?").format(card=card_name, spec=spec)
-    if desc == 221:
-        s = duel.strings['system'].get(desc) % (spec, card_name)
-    elif desc == 0:
-        s = duel.strings['system'].get(200) % (spec, card_name)
-    elif desc < 2048:
-        s = duel.strings['system'].get(desc)
-        to_formats = s.count('[%ls]')
-        if to_formats == 0:
-            pass
-        elif s.count('[%ls]') == 1:
-            s = s % (card_name,)
+    if duel.verbose:
+        pl = duel.players[player]
+        spec = card.get_spec(pl)
+        card_name = card.get_name()
+        # question = pl._("Do you want to use the effect from {card} in {spec}?").format(card=card_name, spec=spec)
+        if desc == 221:
+            s = duel.strings['system'].get(desc) % (spec, card_name)
+        elif desc == 0:
+            s = duel.strings['system'].get(200) % (spec, card_name)
+        elif desc < 2048:
+            s = duel.strings['system'].get(desc)
+            to_formats = s.count('[%ls]')
+            if to_formats == 0:
+                pass
+            elif s.count('[%ls]') == 1:
+                s = s % (card_name,)
+            else:
+                raise NotImplementedError("desc: %d, code: %d, string: %s" % (desc, card.code, s))
         else:
-            raise NotImplementedError("desc: %d, code: %d, string: %s" % (desc, card.code, s))
-    else:
-        raise NotImplementedError("desc: %d, code: %d" % (desc, card.code))
-        # s = card.get_effect_description(pl, desc, True)
-    # if s != '':
-    question = s
+            raise NotImplementedError("desc: %d, code: %d" % (desc, card.code))
+            # s = card.get_effect_description(pl, desc, True)
+        # if s != '':
+        question = s
 
     def prompt():
-        pl.notify(question)
+        if duel.verbose:
+            pl.notify(question)
         pl.notify(Decision, r, ['y', 'n'])
 
     def r(caller):
@@ -52,6 +55,6 @@ def select_effectyn(duel: Duel, player: int, card, desc):
 
     prompt()
 
-MESSAGES = {12: msg_select_effectyn}
+register_message({12: msg_select_effectyn})
 
 

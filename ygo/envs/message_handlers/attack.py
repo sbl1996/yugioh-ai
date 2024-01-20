@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.constants import LOCATION, POSITION
@@ -24,23 +25,27 @@ def attack(duel: Duel, ac, al, aseq, apos, tc, tl, tseq, tpos):
 	acard = duel.get_card(ac, al, aseq)
 	if not acard:
 		return
-	name = duel.players[ac].nickname
-	if tc == 0 and tl == 0 and tseq == 0 and tpos == 0:
-		for pl in duel.players:
-			aspec = acard.get_spec(pl)
-			pl.notify(pl._("%s prepares to attack with %s (%s)") % (name, aspec, acard.get_name()))
-		return
+
+	if duel.verbose:
+		name = duel.players[ac].nickname
+		if tc == 0 and tl == 0 and tseq == 0 and tpos == 0:
+			for pl in duel.players:
+				aspec = acard.get_spec(pl)
+				pl.notify(pl._("%s prepares to attack with %s (%s)") % (name, aspec, acard.get_name()))
+			return
 	tcard = duel.get_card(tc, tl, tseq)
 	if not tcard:
 		return
-	for pl in duel.players:
-		aspec = acard.get_spec(pl)
-		tspec = tcard.get_spec(pl)
-		tcname = tcard.get_name()
-		if tcard.controller != pl.duel_player and tcard.position & POSITION.FACEDOWN:
-			tcname = pl._("%s card") % tcard.get_position(pl)
-		pl.notify(pl._("%s prepares to attack %s (%s) with %s (%s)") % (name, tspec, tcname, aspec, acard.get_name()))
+	
+	if duel.verbose:
+		for pl in duel.players:
+			aspec = acard.get_spec(pl)
+			tspec = tcard.get_spec(pl)
+			tcname = tcard.get_name()
+			if tcard.controller != pl.duel_player and tcard.position & POSITION.FACEDOWN:
+				tcname = pl._("%s card") % tcard.get_position(pl)
+			pl.notify(pl._("%s prepares to attack %s (%s) with %s (%s)") % (name, tspec, tcname, aspec, acard.get_name()))
 
-MESSAGES = {110: msg_attack}
+register_message({110: msg_attack})
 
 

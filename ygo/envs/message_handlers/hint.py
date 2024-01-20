@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 from ygo.envs.duel import Duel
 
@@ -12,6 +13,8 @@ def msg_hint(duel: Duel, data):
 
 
 def hint(duel: Duel, msg, player: int, data):
+	if not duel.verbose:
+		return
 	op = duel.players[1 - player]
 	if msg == 3 and data in duel.strings['system']:
 		duel.players[player].notify(duel.strings['system'][data])
@@ -20,6 +23,6 @@ def hint(duel: Duel, msg, player: int, data):
 	elif msg == 9:
 		op.notify(op.strings['system'][1512] % data)
 
-MESSAGES = {2: msg_hint}
+register_message({2: msg_hint})
 
 

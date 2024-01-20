@@ -6,6 +6,16 @@ from ygo.utils import get_root_directory
 
 db: CardDataset = None
 strings: StringsDatabase = None
+message_map = {}
+
+
+def register_message(d):
+    global message_map
+    for msg, callback in d.items():
+        if msg in message_map:
+            raise ValueError("message already registered")
+        message_map[msg] = callback
+
 
 _languages = {
     "english": "en",

@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.duel import Duel, ActionRequired, Player
@@ -113,4 +114,4 @@ def idle_action(duel: Duel, pl: Player):
     return prompt()
 
 
-MESSAGES = {11: msg_idlecmd}
+register_message({11: msg_idlecmd})

@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 def msg_recover(self, data):
@@ -8,13 +9,15 @@ def msg_recover(self, data):
 	return data.read()
 
 def recover(self, player, amount):
+	self.lp[player] += amount
+	if not self.verbose:
+		return
 	new_lp = self.lp[player] + amount
 	pl = self.players[player]
 	op = self.players[1 - player]
 	pl.notify(pl._("Your lp increased by %d, now %d") % (amount, new_lp))
 	op.notify(op._("%s's lp increased by %d, now %d") % (self.players[player].nickname, amount, new_lp))
-	self.lp[player] += amount
 
-MESSAGES = {92: msg_recover}
+register_message({92: msg_recover})
 
 

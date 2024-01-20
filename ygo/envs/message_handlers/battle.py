@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.constants import LOCATION, TYPE
@@ -18,6 +19,8 @@ def msg_battle(duel: Duel, data):
 
 
 def battle(duel: Duel, attacker, aa, ad, bd0, tloc, da, dd, bd1):
+	if not duel.verbose:
+		return
 	loc = LOCATION((attacker >> 8) & 0xff)
 	seq = (attacker >> 16) & 0xff
 	c2 = attacker & 0xff
@@ -46,6 +49,6 @@ def battle(duel: Duel, attacker, aa, ad, bd0, tloc, da, dd, bd1):
 		else:
 			pl.notify(pl._("%s (%s) attacks") % (card.get_name(), attacker_points))
 
-MESSAGES = {111: msg_battle}
+register_message({111: msg_battle})
 
 

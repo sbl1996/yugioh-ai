@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.duel import Duel, ActionRequired
@@ -17,10 +18,11 @@ def msg_select_place(duel: Duel, data):
 def select_place(duel: Duel, player: int, count, flag):
 	pl = duel.players[player]
 	specs = duel.flag_to_usable_cardspecs(flag)
-	if count == 1:
-		pl.notify(pl._("Select place for card, one of %s.") % ", ".join(specs))
-	else:
-		pl.notify(pl._("Select %d places for card, from %s.") % (count, ", ".join(specs)))
+	if duel.verbose:
+		if count == 1:
+			pl.notify(pl._("Select place for card, one of %s.") % ", ".join(specs))
+		else:
+			pl.notify(pl._("Select %d places for card, from %s.") % (count, ", ".join(specs)))
 
 	def r(caller):
 		values = caller.text.split()
@@ -42,6 +44,6 @@ def select_place(duel: Duel, player: int, count, flag):
 	return specs, r
 
 
-MESSAGES = {18: msg_select_place, 24: msg_select_place}
+register_message({18: msg_select_place, 24: msg_select_place})
 
 

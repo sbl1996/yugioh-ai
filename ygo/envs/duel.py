@@ -11,7 +11,6 @@ import os
 import io
 import struct
 import random
-import pkgutil
 import re
 
 import natsort
@@ -19,20 +18,6 @@ import natsort
 from ygo.envs.card import Card
 from ygo.constants import TYPE, LOCATION, POSITION, QUERY, INFORM
 from ygo.envs import glb
-
-
-MESSAGE_MAP = {}
-
-
-def register_message(d):
-    for msg, callback in d.items():
-        if msg in MESSAGE_MAP:
-            raise ValueError("message already registered")
-        MESSAGE_MAP[msg] = callback
-
-
-def get_message_handler(msg):
-    return MESSAGE_MAP.get(msg)
 
 
 class Decision:

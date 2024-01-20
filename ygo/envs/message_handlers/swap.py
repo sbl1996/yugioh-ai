@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -19,6 +20,8 @@ def msg_swap(self, data):
 	return data.read()
 
 def swap(self, card1, card2):
+	if not self.verbose:
+		return
 	for p in self.players:
 		for card in (card1, card2):
 			plname = self.players[1 - card.controller].nickname
@@ -26,6 +29,6 @@ def swap(self, card1, card2):
 			cname = card.get_name()
 			p.notify(p._("card {name} swapped control towards {plname} and is now located at {targetspec}.").format(plname=plname, targetspec=s, name=cname))
 
-MESSAGES = {55: msg_swap}
+register_message({55: msg_swap})
 
 

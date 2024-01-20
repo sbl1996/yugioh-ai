@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.duel import Duel
@@ -15,6 +16,8 @@ def msg_toss_coin(duel: Duel, data, dice=False):
 	return data.read()
 
 def toss_coin(duel: Duel, player, options):
+	if not duel.verbose:
+		return
 	players = []
 	players.extend(duel.players)
 	for pl in players:
@@ -24,6 +27,8 @@ def toss_coin(duel: Duel, player, options):
 		pl.notify(s)
 
 def toss_dice(duel: Duel, player, options):
+	if not duel.verbose:
+		return
 	opts = [str(opt) for opt in options]
 	players = []
 	players.extend(duel.players)
@@ -34,8 +39,8 @@ def toss_dice(duel: Duel, player, options):
 
 def msg_toss_dice(duel: Duel, *args, **kwargs):
 	kwargs['dice'] = True
-	duel.msg_toss_coin(*args, **kwargs)
+	msg_toss_coin(duel, *args, **kwargs)
 
-MESSAGES = {130: msg_toss_coin, 131: msg_toss_dice}
+register_message({130: msg_toss_coin, 131: msg_toss_dice})
 
 

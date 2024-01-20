@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.duel import Duel
@@ -20,13 +21,14 @@ def win(duel: Duel, player, reason):
 	duel.winner = player
 	duel.win_reason = l_reason
 
-	for w in winners:
-		w.notify(w._("You won (%s).") % l_reason)
-	for l in losers:
-		l.notify(l._("You lost (%s).") % l_reason)
+	if duel.verbose:
+		for w in winners:
+			w.notify(w._("You won (%s).") % l_reason)
+		for l in losers:
+			l.notify(l._("You lost (%s).") % l_reason)
 
 	duel.end()
 
-MESSAGES = {5: msg_win}
+register_message({5: msg_win})
 
 

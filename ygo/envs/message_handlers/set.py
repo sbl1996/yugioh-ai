@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -12,15 +13,17 @@ def msg_set(self, data):
 	return data.read()
 
 def set(self, card):
+	if not self.verbose:
+		return
 	c = card.controller
 	cpl = self.players[c]
 	opl = self.players[1 - c]
 	cpl.notify(cpl._("You set %s (%s) in %s position.") %
-	(card.get_spec(cpl), card.get_name(), card.get_position(cpl)))
+		(card.get_spec(cpl), card.get_name(), card.get_position(cpl)))
 	on = self.players[c].nickname
 	opl.notify(opl._("%s sets %s in %s position.") %
-	(on, card.get_spec(opl), card.get_position(opl)))
+		(on, card.get_spec(opl), card.get_position(opl)))
 
-MESSAGES = {54: msg_set}
+register_message({54: msg_set})
 
 

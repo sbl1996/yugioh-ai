@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -35,23 +36,26 @@ def select_unselect_card(duel: Duel, player: int, finishable, cancelable, min, m
     pl.card_list = select_cards + unselect_cards
 
     def prompt():
-        text = pl._("Check or uncheck %d to %d cards by entering their number")%(min, max)
-        if cancelable and not finishable:
-            text += "\n" + pl._("Enter c to cancel")
-        if finishable:
-            text += "\n" + pl._("Enter f to finish")
-        pl.notify(text)
+        if duel.verbose:
+            text = pl._("Check or uncheck %d to %d cards by entering their number")%(min, max)
+            if cancelable and not finishable:
+                text += "\n" + pl._("Enter c to cancel")
+            if finishable:
+                text += "\n" + pl._("Enter f to finish")
+            pl.notify(text)
 
-    for i, c in enumerate(pl.card_list):
-        name = duel.cardlist_info_for_player(c, pl)
-        if c in select_cards:
-            state = pl._("unchecked")
-        else:
-            state = pl._("checked")
-        pl.notify("%d: %s (%s)" % (i+1, name, state))
+    if duel.verbose:
+        for i, c in enumerate(pl.card_list):
+            name = duel.cardlist_info_for_player(c, pl)
+            if c in select_cards:
+                state = pl._("unchecked")
+            else:
+                state = pl._("checked")
+            pl.notify("%d: %s (%s)" % (i+1, name, state))
 
     def error(text):
-        pl.notify(text)
+        if duel.verbose:
+            pl.notify(text)
         return prompt()
 
     def f(caller):
@@ -80,6 +84,6 @@ def select_unselect_card(duel: Duel, player: int, finishable, cancelable, min, m
     return prompt()
 
 
-MESSAGES = {26: msg_select_unselect_card}
+register_message({26: msg_select_unselect_card})
 
 

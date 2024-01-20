@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.constants import AMOUNT_ATTRIBUTES, AMOUNT_RACES
@@ -17,6 +18,8 @@ def msg_card_hint(duel: Duel, data):
 
 
 def card_hint(duel: Duel, card, type, value):
+	if not duel.verbose:
+		return
 	if type == 3: # race announcement
 		for pl in duel.players:
 			races = [duel.strings['system'][1020+i] for i in range(AMOUNT_RACES) if value & (1<<i)]
@@ -26,10 +29,9 @@ def card_hint(duel: Duel, card, type, value):
 			attributes = [duel.strings['system'][1010+i] for i in range(AMOUNT_ATTRIBUTES) if value & (1<<i)]
 			pl.notify(pl._("{spec} ({name}) selected {value}.").format(spec=card.get_spec(pl), name=card.get_name(), value=', '.join(attributes)))
 	else:
-		if duel.verbose:
-			print("unhandled card hint type", type)
-			print("hint value", value)
+		print("unhandled card hint type", type)
+		print("hint value", value)
 
-MESSAGES = {160: msg_card_hint}
+register_message({160: msg_card_hint})
 
 

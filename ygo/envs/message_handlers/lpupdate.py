@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.duel import Duel
@@ -16,6 +17,6 @@ def lpupdate(duel: Duel, player, lp):
 	else:
 		duel.damage(player, duel.lp[player] - lp)
 
-MESSAGES = {94: msg_lpupdate}
+register_message({94: msg_lpupdate})
 
 

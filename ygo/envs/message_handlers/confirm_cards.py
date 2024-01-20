@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.constants import LOCATION
@@ -25,12 +26,14 @@ def confirm_cards(duel: Duel, player: int, cards):
 	op = duel.players[1 - cards[0].controller]
 	players = [op]
 	for pl in players:
-		pl.notify(pl._("{player} shows you {count} cards.")
-			.format(player=player.nickname, count=len(cards)))
+		if duel.verbose:
+			pl.notify(pl._("{player} shows you {count} cards.")
+				.format(player=player.nickname, count=len(cards)))
 		for i, c in enumerate(cards):
-			pl.notify("%s: %s" % (i + 1, c.get_name()))
+			if duel.verbose:
+				pl.notify("%s: %s" % (i + 1, c.get_name()))
 			duel.revealed[(c.controller, c.location, c.sequence)] = True
 
-MESSAGES = {31: msg_confirm_cards}
+register_message({31: msg_confirm_cards})
 
 

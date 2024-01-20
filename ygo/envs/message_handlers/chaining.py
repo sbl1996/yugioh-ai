@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -25,9 +26,11 @@ def chaining(duel: Duel, card: Card, tc, tl, ts, desc, cs):
 	n = duel.players[c].nickname
 	duel.chaining_player = c
 
+	if not duel.verbose:
+		return
 	duel.players[c].notify(duel.players[c]._("Activating {0} ({1})").format(card.get_spec(duel.players[c]), card.get_name()))
 	duel.players[o].notify(duel.players[o]._("{0} activating {1} ({2})").format(n, card.get_spec(duel.players[o]), card.get_name()))
 
-MESSAGES = {70: msg_chaining}
+register_message({70: msg_chaining})
 
 

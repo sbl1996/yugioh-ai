@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.constants import OPCODE
@@ -51,6 +52,6 @@ def announce_card(duel: Duel, player: int, options):
 		duel.set_responsei(card.code)
 	prompt()
 
-MESSAGES = {142: msg_announce_card}
+register_message({142: msg_announce_card})
 
 

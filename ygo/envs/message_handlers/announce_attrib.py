@@ -1,4 +1,4 @@
-from ygo.envs.duel import register_message
+from ygo.envs.glb import register_message
 import io
 import natsort
 

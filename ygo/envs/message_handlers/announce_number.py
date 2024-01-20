@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.duel import Duel, Decision
@@ -26,6 +27,6 @@ def announce_number(duel: Duel, player: int, opts):
 		duel.set_responsei(opts.index(ints[0]))
 	prompt()
 
-MESSAGES = {143: msg_announce_number}
+register_message({143: msg_announce_number})
 
 

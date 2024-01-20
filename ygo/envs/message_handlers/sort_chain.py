@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -24,6 +25,6 @@ def sort_chain(self, player, cards):
 	self.set_responsei(-1)
 
 
-MESSAGES = {21: msg_sort_chain}
+register_message({21: msg_sort_chain})
 
 

@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -17,6 +18,8 @@ def msg_move(duel: Duel, data):
 
 
 def move(duel: Duel, code, location, newloc, reason):
+	if not duel.verbose:
+		return
 	try:
 		card = Card(code)
 	except ygo.exceptions.CardNotFoundError:
@@ -142,6 +145,6 @@ def move(duel: Duel, code, location, newloc, reason):
 			(INFORM.OPPONENT, lambda p: p._("{plname}'s card {spec} ({name}) was attached to {targetspec} ({targetname}) as XYZ material").format(spec=getspec(p), name=card.get_name(), targetspec=attached_to.get_spec(p), targetname=attached_to.get_name(), plname=pl.nickname)),
 		)
 
-MESSAGES = {50: msg_move}
+register_message({50: msg_move})
 
 

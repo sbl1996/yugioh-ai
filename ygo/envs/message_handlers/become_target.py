@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.constants import LOCATION, POSITION
@@ -20,6 +21,9 @@ def become_target(duel: Duel, tc, tl, tseq):
 	card = duel.get_card(tc, tl, tseq)
 	if not card:
 		return
+	
+	if not duel.verbose:
+		return
 	name = duel.players[duel.chaining_player].nickname
 	for pl in duel.players:
 		spec = card.get_spec(pl)
@@ -29,6 +33,6 @@ def become_target(duel: Duel, tc, tl, tseq):
 		pl.notify(pl._("%s targets %s (%s)") % (name, spec, tcname))
 
 
-MESSAGES = {83: msg_become_target}
+register_message({83: msg_become_target})
 
 

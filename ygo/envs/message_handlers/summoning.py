@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -19,6 +20,8 @@ def msg_summoning(duel: Duel, data, special=False):
 
 
 def summoning(duel: Duel, card, special=False):
+	if not duel.verbose:
+		return
 	nick = duel.players[card.controller].nickname
 	for pl in duel.players:
 		pos = card.get_position(pl)
@@ -36,6 +39,6 @@ def msg_summoning_special(duel: Duel, *args, **kwargs):
 	msg_summoning(duel, *args, **kwargs)
 
 
-MESSAGES = {60: msg_summoning, 62: msg_summoning_special, 61: msg_summoned}
+register_message({60: msg_summoning, 62: msg_summoning_special, 61: msg_summoned})
 
 

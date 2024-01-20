@@ -3,7 +3,8 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
-from ygo.envs.duel import Player, Duel, ActionRequired, get_message_handler
+from ygo.envs.duel import Player, Duel, ActionRequired
+from ygo.envs import glb
 from ygo.utils import load_deck
 
 
@@ -71,7 +72,7 @@ class YGOEnv(gym.Env):
         self._res = None
         self._terminated = False
 
-        self.duel = Duel()
+        self.duel = Duel(seed=seed, verbose=self.verbose)
         self.duel.init(players)
 
         self.next(process_first=True)
@@ -92,7 +93,7 @@ class YGOEnv(gym.Env):
                 skip_process = False
             while data:
                 msg = int(data[0])
-                fn = get_message_handler(msg)
+                fn = glb.message_map.get(msg, None)
                 if fn:
                     ret = fn(self.duel, data)
                     if isinstance(ret, ActionRequired):

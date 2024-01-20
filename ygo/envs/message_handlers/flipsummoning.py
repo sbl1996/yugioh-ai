@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.constants import LOCATION
@@ -16,12 +17,14 @@ def msg_flipsummoning(duel: Duel, data):
 	return data.read()
 
 def flipsummoning(duel: Duel, card):
+	if not duel.verbose:
+		return
 	cpl = duel.players[card.controller]
 	for pl in duel.players:
 		spec = card.get_spec(pl)
 		pl.notify(pl._("{player} flip summons {card} ({spec}).")
 		.format(player=cpl.nickname, card=card.get_name(), spec=spec))
 
-MESSAGES = {64: msg_flipsummoning}
+register_message({64: msg_flipsummoning})
 
 

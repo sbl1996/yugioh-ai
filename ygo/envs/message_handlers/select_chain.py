@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 
 from ygo.envs.card import Card
@@ -38,7 +39,8 @@ def select_chain(duel: Duel, player: int, size, spe_count, forced, chains):
     duel.chaining_player = player
     op = duel.players[1 - player]
     if not op.seen_waiting:
-        op.notify(op._("Waiting for opponent."))
+        if duel.verbose:
+            op.notify(op._("Waiting for opponent."))
         op.seen_waiting = True
     chain_cards = [c[1] for c in chains]
     specs = {}
@@ -54,19 +56,20 @@ def select_chain(duel: Duel, player: int, size, spe_count, forced, chains):
         card.chain_spec = cs
         card.effect_description = card.get_effect_description(pl, desc, True)
 
-    if forced:
-        pl.notify(pl._("Select chain:"))
-    else:
-        pl.notify(pl._("Select chain (c to cancel):"))
-    for card in chain_cards:
-        if card.effect_description == '':
-            pl.notify("%s: %s" % (card.chain_spec, card.get_name()))
+    if duel.verbose:
+        if forced:
+            pl.notify(pl._("Select chain:"))
         else:
-            pl.notify("%s (%s): %s"%(card.chain_spec, card.get_name(), card.effect_description))
-    # if forced:
-    # 	prompt = pl._("Select card to chain:")
-    # else:
-    # 	prompt = pl._("Select card to chain (c = cancel):")
+            pl.notify(pl._("Select chain (c to cancel):"))
+        for card in chain_cards:
+            if card.effect_description == '':
+                pl.notify("%s: %s" % (card.chain_spec, card.get_name()))
+            else:
+                pl.notify("%s (%s): %s"%(card.chain_spec, card.get_name(), card.effect_description))
+        # if forced:
+        # 	prompt = pl._("Select card to chain:")
+        # else:
+        # 	prompt = pl._("Select card to chain (c = cancel):")
 
     options = []
     for spec in specs:
@@ -92,4 +95,4 @@ def select_chain(duel: Duel, player: int, size, spe_count, forced, chains):
         duel.set_responsei(idx)
     return options, r
 
-MESSAGES = {16: msg_select_chain}
+register_message({16: msg_select_chain})

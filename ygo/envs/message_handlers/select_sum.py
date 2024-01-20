@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 from itertools import product, combinations
 
 import io
@@ -166,6 +167,6 @@ def check(cards, acc):
         return False
     return True
 
-MESSAGES = {23: msg_select_sum}
+register_message({23: msg_select_sum})
 
 

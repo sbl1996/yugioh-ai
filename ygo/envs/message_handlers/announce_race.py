@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 import natsort
 
@@ -46,6 +47,6 @@ def announce_race(duel: Duel, player: int, count, avail):
 		duel.set_responsei(result)
 	prompt()
 
-MESSAGES = {140: msg_announce_race}
+register_message({140: msg_announce_race})
 
 

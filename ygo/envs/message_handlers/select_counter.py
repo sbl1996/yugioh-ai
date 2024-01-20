@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 import struct
 
@@ -67,15 +68,17 @@ def select_counter(duel: Duel, player: int, countertype, count, cards):
     pl = duel.players[player]
     counter_str = duel.strings['counter'][countertype]
     def prompt():
-        pl.notify(pl._("Type new {counter} for {cards} cards, separated by spaces.")
-            .format(counter=counter_str, cards=len(cards)))
-        for c in cards:
-            pl.notify("%s (%d)" % (c.get_name(), c.counter))
+        if duel.verbose:
+            pl.notify(pl._("Type new {counter} for {cards} cards, separated by spaces.")
+                .format(counter=counter_str, cards=len(cards)))
+            for c in cards:
+                pl.notify("%s (%d)" % (c.get_name(), c.counter))
         counters = [c.counter for c in cards]
         options = [ " ".join([str(x) for x in comb]) for comb in find_combinations(counters, count) ]
         pl.notify(Decision, r, options)
     def error(text):
-        pl.notify(text)
+        if duel.verbose:
+            pl.notify(text)
         return prompt()
     def r(caller):
         ints = parse_ints(caller.text)
@@ -90,6 +93,6 @@ def select_counter(duel: Duel, player: int, countertype, count, cards):
         duel.set_responseb(bytes)
     prompt()
 
-MESSAGES = {22: msg_select_counter}
+register_message({22: msg_select_counter})
 
 

@@ -1,4 +1,4 @@
-from ygo.envs.duel import register_message
+from ygo.envs.glb import register_message
 from itertools import combinations
 
 import io
@@ -58,20 +58,22 @@ def select_card(
     pl.card_list = cards
 
     def prompt():
-        if is_tribute:
-            pl.notify(
-                pl._("Select %d to %d cards to tribute separated by spaces:")
-                % (min_cards, max_cards)
-            )
-        else:
-            pl.notify(
-                pl._("Select %d to %d cards separated by spaces:") % (min_cards, max_cards)
-            )
+        if duel.verbose:
+            if is_tribute:
+                pl.notify(
+                    pl._("Select %d to %d cards to tribute separated by spaces:")
+                    % (min_cards, max_cards)
+                )
+            else:
+                pl.notify(
+                    pl._("Select %d to %d cards separated by spaces:") % (min_cards, max_cards)
+                )
         options = []
         for i, c in enumerate(cards):
-            name = duel.cardlist_info_for_player(c, pl)
             options.append(i + 1)
-            pl.notify("%d: %s" % (i + 1, name))
+            if duel.verbose:
+                name = duel.cardlist_info_for_player(c, pl)
+                pl.notify("%d: %s" % (i + 1, name))
         combs = []
         for t in range(min_cards, max_cards + 1):
             combs += [" ".join([ str(x) for x in comb]) for comb in combinations(options, t)]

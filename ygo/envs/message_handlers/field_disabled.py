@@ -1,3 +1,4 @@
+from ygo.envs.glb import register_message
 import io
 from ygo.envs.duel import Duel
 
@@ -9,6 +10,8 @@ def msg_field_disabled(duel: Duel, data):
 	return data.read()
 
 def field_disabled(duel: Duel, locations):
+	if not duel.verbose:
+		return
 	specs = duel.flag_to_usable_cardspecs(locations, reverse=True)
 	opspecs = []
 	for spec in specs:
@@ -19,6 +22,6 @@ def field_disabled(duel: Duel, locations):
 	duel.players[0].notify(duel.players[0]._("Field locations %s are disabled.") % ", ".join(specs))
 	duel.players[1].notify(duel.players[1]._("Field locations %s are disabled.") % ", ".join(opspecs))
 
-MESSAGES = {56: msg_field_disabled}
+register_message({56: msg_field_disabled})
 
 
