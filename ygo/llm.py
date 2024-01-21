@@ -6,7 +6,7 @@ import sqlite3
 import pandas as pd
 
 from ygo.constants import TYPE, LOCATION, all_types, type2str, attribute2str, race2str, location2str, POSITION, position2str
-from ygo.duel import Duel, Card as DuelCard, lib
+from ygo.game.duel import Duel, Card as DuelCard, lib
 
 
 def parse_types(value):

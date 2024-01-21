@@ -1,11 +1,10 @@
-from ygo.envs.glb import register_message
 from itertools import combinations
 
 import io
 
-from ygo.envs.card import Card
+from ygo.game.card import Card
 from ygo.constants import LOCATION
-from ygo.envs.duel import Duel, ActionRequired
+from ygo.game.duel import Duel, Decision
 from ygo.utils import parse_ints
 
 
@@ -28,9 +27,8 @@ def msg_select_tribute(duel: Duel, data):
         ).position
         card.release_param = duel.read_u8(data)
         cards.append(card)
-
-    options, r = select_tribute(duel, player, cancelable, min, max, cards)
-    return ActionRequired("select_tribute", options, r, data.read())
+    select_tribute(duel, player, cancelable, min, max, cards)
+    return data.read()
 
 
 def msg_select_card(duel: Duel, data):
@@ -47,8 +45,8 @@ def msg_select_card(duel: Duel, data):
         card = Card(code)
         card.set_location(loc)
         cards.append(card)
-    options, r = select_card(duel, player, cancelable, min, max, cards)
-    return ActionRequired("select_card", options, r, data.read())
+    select_card(duel, player, cancelable, min, max, cards)
+    return data.read()
 
 
 def select_card(
@@ -57,7 +55,7 @@ def select_card(
     pl = duel.players[player]
     pl.card_list = cards
 
-    if duel.verbose:
+    def prompt():
         if is_tribute:
             pl.notify(
                 pl._("Select %d to %d cards to tribute separated by spaces:")
@@ -67,40 +65,45 @@ def select_card(
             pl.notify(
                 pl._("Select %d to %d cards separated by spaces:") % (min_cards, max_cards)
             )
-    options = []
-    spec2i = {}
-    for i, c in enumerate(cards):
-        spec = c.get_spec(pl)
-        options.append(spec)
-        spec2i[spec] = i
-        if duel.verbose:
+        options = []
+        for i, c in enumerate(cards):
             name = duel.cardlist_info_for_player(c, pl)
-            pl.notify("%s: %s" % (spec, name))
-    combs = []
-    for t in range(min_cards, max_cards + 1):
-        combs += [" ".join(comb) for comb in combinations(options, t)]
+            options.append(i + 1)
+            pl.notify("%d: %s" % (i + 1, name))
+        combs = []
+        for t in range(min_cards, max_cards + 1):
+            combs += [" ".join([ str(x) for x in comb]) for comb in combinations(options, t)]
+        pl.notify(Decision, f, combs)
 
-    def r(caller):
-        cds = [spec2i[s] for s in caller.text.split(" ")]
+    def error(text):
+        pl.notify(text)
+        return prompt()
+
+    def f(caller):
+        cds = [i - 1 for i in parse_ints(caller.text)]
+        if len(cds) != len(set(cds)):
+            return error(pl._("Duplicate values not allowed."))
         if (not is_tribute and len(cds) < min_cards) or len(cds) > max_cards:
-            raise ValueError("Invalid number of cards.")
+            return error(
+                pl._("Please enter between %d and %d cards.") % (min_cards, max_cards)
+            )
         if cds and (min(cds) < 0 or max(cds) > len(cards) - 1):
-            raise ValueError("Invalid card index.")
+            return error(pl._("Invalid value."))
         buf = bytes([len(cds)])
         tribute_value = 0
         for i in cds:
             tribute_value += cards[i].release_param if is_tribute else 0
             buf += bytes([i])
         if is_tribute and tribute_value < min_cards:
-            raise ValueError("Not enough tributes.")
+            return error(pl._("Not enough tributes."))
         duel.set_responseb(buf)
 
-    return combs, r
+    return prompt()
 
 
 def select_tribute(duel: Duel, *args, **kwargs):
     kwargs["is_tribute"] = True
-    return select_card(duel, *args, **kwargs)
+    select_card(duel, *args, **kwargs)
 
 
-register_message({15: msg_select_card, 20: msg_select_tribute})
+MESSAGES = {15: msg_select_card, 20: msg_select_tribute}

@@ -11,14 +11,15 @@ import os
 import io
 import struct
 import random
+import pkgutil
 import re
 
 import natsort
 
-from ygo.envs.card import Card
-from ygo.constants import TYPE, LOCATION, POSITION, QUERY, INFORM
-from ygo.envs import glb
-
+from .card import Card
+from ..constants import TYPE, LOCATION, POSITION, QUERY, INFORM
+from . import globals
+from .. import message_handlers_a
 
 class Decision:
     pass
@@ -31,7 +32,6 @@ class ActionRequired:
         self.options = options
         self.callback = callback
         self.data = data
-
 
 class Player:
 
@@ -64,7 +64,7 @@ if DUEL_AVAILABLE:
     @ffi.def_extern()
     def card_reader_callback(code, data):
         cd = data[0]
-        row = glb.db.database.execute('select * from datas where id=?', (code,)).fetchone()
+        row = globals.language_handler.primary_database.execute('select * from datas where id=?', (code,)).fetchone()
         if row is None:
             print("Card %d not found in database" % code)
             raise RuntimeError
@@ -103,9 +103,8 @@ if DUEL_AVAILABLE:
 
     lib.set_script_reader(lib.script_reader_callback)
 
-
 class Duel:
-    def __init__(self, seed=None, verbose=False):
+    def __init__(self, seed=None):
         self.buf = ffi.new('char[]', 4096)
         if seed is None:
             seed = random.randint(0, 0xffffffff)
@@ -118,21 +117,31 @@ class Duel:
         self.players: List[Player] = [None, None]
         self.lp = [8000, 8000]
         self.started = False
+        self.message_map = {}
         self.state = ''
         self.revealed = {}
+        self.bind_message_handlers()
         self.revealing = [False, False]
         self.cards = [None, None]
         self.unique_cards = None
-        self.verbose = verbose
+        self.verbose = True
 
     def build_unique_cards(self):
+        self.unique_cards = self.get_unique_cards()
         unique_code2cards = {}
+        for c in self.unique_cards:
+            unique_code2cards[c.code] = c
+        self.unique_code2cards = unique_code2cards
+
+    def get_unique_cards(self):
+        card_codes = set()
+        unique_cards = []
         for cs in self.cards:
             for c in cs:
-                if c.code not in unique_code2cards:
-                    unique_code2cards[c.code] = c
-        self.unique_cards = list(unique_code2cards.values())
-        self.unique_code2cards = unique_code2cards
+                if c.code not in card_codes:
+                    card_codes.add(c.code)
+                    unique_cards.append(c)
+        return unique_cards
 
     def set_player(self, i, player: Player, shuffle=True):
         assert self.players[i] is None
@@ -143,13 +152,6 @@ class Duel:
         self.players[i] = player
         cards = self.load_deck(player, shuffle)
         self.cards[i] = cards
-
-    def init(self, players, shuffle=True):
-        for i, player in enumerate(players):
-            self.set_player(i, player, shuffle)
-            player.duel = self
-        self.build_unique_cards()
-        self.env_start()
 
     def load_deck(self, player, shuffle = True):
         full_deck = player.cards[:]
@@ -215,12 +217,54 @@ class Duel:
         data = ffi.unpack(self.buf, l)
         return res, data
 
+    def start(self, rules = 5):
+        # rules = 1, Traditional
+        # rules = 0, Default
+        # rules = 4, Link
+        # rules = 5, MR5
+        options = 0
+        options = ((rules & 0xFF) << 16) + (options & 0xFFFF)
+        lib.start_duel(self.duel, options)
+        self.started = True
+        for i, pl in enumerate(self.players):
+            pl.notify(pl._("Duel created. You are player %d.") % i)
+            pl.notify(pl._("Type help dueling for a list of usable commands."))
+
+        if self.verbose:
+            from ygo.llm import show_duel_state
+            show_duel_state(self, 0, opponent=False)
+            show_duel_state(self, 1, opponent=False)
+
+        while self.started:
+            res = self.process()
+            if res & 0x20000:
+                break
+
     def end(self):
         lib.end_duel(self.duel)
         self.started = False
         for pl in self.players:
             pl.init_state()
         self.duel = None
+
+    def process(self):
+        res = lib.process(self.duel)
+        l = lib.get_message(self.duel, ffi.cast('byte *', self.buf))
+        data = ffi.unpack(self.buf, l)
+        data = self.process_messages(data)
+        return res
+
+    def process_messages(self, data):
+        while data:
+            msg = int(data[0])
+            fn = self.message_map.get(msg)
+            if fn:
+                data = fn(self, data)
+            else:
+                if self.verbose:
+                    print("msg %d unhandled" % msg)
+                data = b''
+        return data
 
     def read_cardlist(self, data, extra=False, extra8=False):
         res = []
@@ -255,11 +299,10 @@ class Duel:
         buf = ffi.new('char[64]', r)
         lib.set_responseb(self.duel, ffi.cast('byte *', buf))
 
-    def get_cards_in_location(self, player, location) -> List[Card]:
+    def get_cards_in_location(self, player, location):
         cards = []
-        # flags = QUERY.CODE | QUERY.POSITION | QUERY.LEVEL | QUERY.RANK | QUERY.ATTACK | QUERY.DEFENSE | QUERY.EQUIP_CARD | QUERY.OVERLAY_CARD | QUERY.COUNTERS | QUERY.LSCALE | QUERY.RSCALE | QUERY.LINK
-        flags = 14893875
-        bl = lib.query_field_card(self.duel, player, location.value, flags, ffi.cast('byte *', self.buf), 0)
+        flags = QUERY.CODE | QUERY.POSITION | QUERY.LEVEL | QUERY.RANK | QUERY.ATTACK | QUERY.DEFENSE | QUERY.EQUIP_CARD | QUERY.OVERLAY_CARD | QUERY.COUNTERS | QUERY.LSCALE | QUERY.RSCALE | QUERY.LINK
+        bl = lib.query_field_card(self.duel, player, location.value, flags.value, ffi.cast('byte *', self.buf), False)
         buf = io.BytesIO(ffi.unpack(self.buf, bl))
         while True:
             if buf.tell() == bl:
@@ -360,7 +403,7 @@ class Duel:
         if n == 0:
             n = 1
         name = '%'+name+'%'
-        rows = glb.db.database.execute('select id from texts where name like ? limit ?', (name, n)).fetchall()
+        rows = globals.db.execute('select id from texts where name like ? limit ?', (name, n)).fetchall()
         if not rows:
             return
         nr = rows[min(n - 1, len(rows) - 1)]
@@ -374,6 +417,36 @@ class Duel:
         position = POSITION((loc >> 24) & 0xff)
         return (controller, location, sequence, position)
 
+    # all modules in ygo.message_handlers package will be imported here
+    # if a module contains a MESSAGES dictionary attribute,
+    # all of those entries will be considered message handlers
+    # all methods mentioned in those dictionaries will be linked into
+    # the Duel object, same goes for all additional methods mentioned
+    # in an additional METHODS dictionary attribute
+
+    def bind_message_handlers(self):
+
+        all_handlers = {}
+
+        for importer, modname, ispkg in pkgutil.iter_modules(message_handlers_a.__path__):
+            if not ispkg:
+                try:
+                    m = importer.find_module(modname).load_module(modname)
+                    # check if we got message handlers registered in there
+                    handlers = m.__dict__.get('MESSAGES')
+                    if type(handlers) is dict:
+                        all_handlers.update(handlers)
+                except Exception as e:
+                    print("Error loading message handler", modname)
+                    print(e)
+
+        # link all those methods into this object
+        for h in all_handlers.keys():
+            # m = all_handlers[h].__get__(self)
+            # setattr(self, all_handlers[h].__name__, m)
+            # self.message_map[h] = m
+            self.message_map[h] = all_handlers[h]
+
     def get_usable(self, pl):
         summonable = [card.get_spec(pl) for card in self.summonable]
         spsummon = [card.get_spec(pl) for card in self.spsummon]
@@ -382,6 +455,26 @@ class Duel:
         idle_set = [card.get_spec(pl) for card in self.idle_set]
         idle_activate = [card.get_spec(pl) for card in self.idle_activate]
         return natsort.natsorted(set(summonable + spsummon + repos + mset + idle_set + idle_activate))
+
+    def show_usable(self, pl):
+        summonable = natsort.natsorted([card.get_spec(pl) for card in self.summonable])
+        spsummon = natsort.natsorted([card.get_spec(pl) for card in self.spsummon])
+        repos = natsort.natsorted([card.get_spec(pl) for card in self.repos])
+        mset = natsort.natsorted([card.get_spec(pl) for card in self.idle_mset])
+        idle_set = natsort.natsorted([card.get_spec(pl) for card in self.idle_set])
+        idle_activate = natsort.natsorted([card.get_spec(pl) for card in self.idle_activate])
+        if summonable:
+            pl.notify(pl._("Summonable in attack position: %s") % ", ".join(summonable))
+        if mset:
+            pl.notify(pl._("Summonable in defense position: %s") % ", ".join(mset))
+        if spsummon:
+            pl.notify(pl._("Special summonable: %s") % ", ".join(spsummon))
+        if idle_activate:
+            pl.notify(pl._("Activatable: %s") % ", ".join(idle_activate))
+        if repos:
+            pl.notify(pl._("Repositionable: %s") % ", ".join(repos))
+        if idle_set:
+            pl.notify(pl._("Settable: %s") % ", ".join(idle_set))
 
     def cardspec_to_ls(self, text):
         if text.startswith('o'):
@@ -431,12 +524,152 @@ class Duel:
             position = card.get_position(pl)
             return (pl._("{position} card ({spec})")
                 .format(position=position, spec=spec))
-        name = card.get_name()
+        name = card.get_name(pl)
         return "{name} ({spec})".format(name=name, spec=spec)
+
+    def show_table(self, pl, player, hide_facedown=False):
+        mz = self.get_cards_in_location(player, LOCATION.MZONE)
+        sz = self.get_cards_in_location(player, LOCATION.SZONE)
+        if len(mz+sz) == 0:
+            pl.notify(pl._("Table is empty."))
+            return
+        for card in mz:
+            s = "m%d: " % (card.sequence + 1)
+            if hide_facedown and card.position & POSITION.FACEDOWN:
+                s += card.get_position(pl)
+            else:
+                s += card.get_name(pl) + " "
+                if card.type & TYPE.LINK:
+                    s += (pl._("({attack}) link rating {level}")
+                        .format(attack=card.attack, level=card.level))
+                elif card.type & TYPE.XYZ:
+                    s += (pl._("({attack}/{defense}) rank {level}")
+                        .format(attack=card.attack, defense=card.defense, level=card.level))
+                else:
+                    s += (pl._("({attack}/{defense}) level {level}")
+                        .format(attack=card.attack, defense=card.defense, level=card.level))
+                s += " " + card.get_position(pl)
+
+                if len(card.xyz_materials):
+                    s += " ("+pl._("xyz materials: %d")%(len(card.xyz_materials))+")"
+                counters = []
+                for c in card.counters:
+                    counter_type = c & 0xffff
+                    counter_val = (c >> 16) & 0xffff
+                    counter_type = self.strings['counter'].get(counter_type) or ('Counter %d' % counter_type)
+                    counter_str = "%s: %d" % (counter_type, counter_val)
+                    counters.append(counter_str)
+                if counters:
+                    s += " (" + ", ".join(counters) + ")"
+            pl.notify(s)
+        for card in sz:
+            s = "s%d: " % (card.sequence + 1)
+            if hide_facedown and card.position & POSITION.FACEDOWN:
+                s += card.get_position(pl)
+            else:
+                s += card.get_name(pl) + " "
+                s += card.get_position(pl)
+
+                if card.type & TYPE.PENDULUM:
+                    s += " (" + pl._("Pendulum scale: %d/%d") % (card.lscale, card.rscale) + ")"
+
+                if card.equip_target:
+                    s += ' ' + pl._('(equipped to %s)')%(card.equip_target.get_spec(pl))
+
+                counters = []
+                for c in card.counters:
+                    counter_type = c & 0xffff
+                    counter_val = (c >> 16) & 0xffff
+                    counter_type = self.strings['counter'].get(counter_type) or ('Counter %d' % counter_type)
+                    counter_str = "%s: %d" % (counter_type, counter_val)
+                    counters.append(counter_str)
+                if counters:
+                    s += " (" + ", ".join(counters) + ")"
+
+            pl.notify(s)
+
+        for card in mz:
+            if card.type & TYPE.LINK:
+                zone = self.get_linked_zone(card)
+                if zone == '':
+                    continue
+                pl.notify(pl._("Zone linked by %s (%s): %s")%(card.get_name(pl), card.get_spec(pl), zone))
+
+    def show_cards_in_location(self, pl, player, location, hide_facedown=False):
+        cards = self.get_cards_in_location(player, location)
+        if not cards:
+            pl.notify(pl._("No cards."))
+            return
+        for card in cards:
+            s = card.get_spec(pl) + " "
+            if hide_facedown and card.position & POSITION.FACEDOWN:
+                s += card.get_position(pl)
+            else:
+                s += card.get_name(pl)
+                if location != LOCATION.HAND:
+                    s += " " + card.get_position(pl)
+                if card.type & TYPE.MONSTER:
+                    if card.type & TYPE.LINK:
+                        s += " " + pl._("link rating %d") % card.level
+                    elif card.type & TYPE.XYZ:
+                        s += " " + pl._("rank %d") % card.level
+                    else:
+                        s += " " + pl._("level %d") % card.level
+            pl.notify(s)
+
+    def show_score(self, pl):
+        player = pl.duel_player
+        deck = lib.query_field_count(self.duel, player, LOCATION.DECK.value)
+        odeck = lib.query_field_count(self.duel, 1 - player, LOCATION.DECK.value)
+        grave = lib.query_field_count(self.duel, player, LOCATION.GRAVE.value)
+        ograve = lib.query_field_count(self.duel, 1 - player, LOCATION.GRAVE.value)
+        hand = lib.query_field_count(self.duel, player, LOCATION.HAND.value)
+        ohand = lib.query_field_count(self.duel, 1 - player, LOCATION.HAND.value)
+        removed = lib.query_field_count(self.duel, player, LOCATION.REMOVED.value)
+        oremoved = lib.query_field_count(self.duel, 1 - player, LOCATION.REMOVED.value)
+
+        pl.notify(pl._("Your LP: %d Opponent LP: %d") % (self.lp[player], self.lp[1 - player]))
+        pl.notify(pl._("Hand: You: %d Opponent: %d") % (hand, ohand))
+        pl.notify(pl._("Deck: You: %d Opponent: %d") % (deck, odeck))
+        pl.notify(pl._("Grave: You: %d Opponent: %d") % (grave, ograve))
+        pl.notify(pl._("Removed: You: %d Opponent: %d") % (removed, oremoved))
+
+        if self.paused:
+            pl.notify(pl._("This duel is currently paused."))
+        else:
+            if pl.duel_player == self.tp and pl in self.players:
+                pl.notify(pl._("It's your turn."))
+            else:
+                pl.notify(pl._("It's %s's turn.")%(self.players[self.tp].nickname))
 
     @property
     def strings(self):
-        return glb.strings.get_strings(glb.strings.primary_language)
+        return globals.language_handler.get_strings(globals.language_handler.primary_language)
+
+    def show_info(self, card, pl):
+        pln = pl.duel_player
+        cs = card.get_spec(pl)
+        opponent = 1 - pln
+        if card.position & POSITION.FACEDOWN and (card.controller == opponent):
+            pl.notify(pl._("%s: %s card.") % (cs, card.get_position(pl)))
+            return
+        pl.notify(card.get_info(pl))
+
+    def show_info_cmd(self, pl, spec):
+        cards = []
+        for i in (0, 1):
+            for j in (LOCATION.MZONE, LOCATION.SZONE, LOCATION.GRAVE, LOCATION.REMOVED, LOCATION.HAND, LOCATION.EXTRA):
+                cards.extend(card for card in self.get_cards_in_location(i, j))
+        specs = {}
+        for card in cards:
+            specs[card.get_spec(pl)] = card
+        for i, card in enumerate(pl.card_list):
+            specs[str(i + 1)] = card
+        if spec not in specs:
+            pl.notify(pl._("Invalid card."))
+            return
+        self.show_info(specs[spec], pl)
+
 
     def inform(self, ref_player, *inf):
         """
@@ -478,3 +711,25 @@ class Duel:
 
         for pl, cl in informed.items():
             pl.notify(cl(pl))
+
+    def get_linked_zone(self, card):
+
+        lst = []
+
+        zone = lib.query_linked_zone(self.duel, card.controller, card.location.value, card.sequence)
+
+        i = 0
+
+        for i in range(8):
+            if zone & (1<<i):
+                lst.append('m'+str(i+1))
+
+        for i in range(16, 24, 1):
+            if zone & (1<<i):
+                lst.append('om'+str(i-15))
+
+        return ', '.join(lst)
+
+    @property
+    def paused(self):
+        return len(self.players) != len([p for p in self.players if p.connection is not None])

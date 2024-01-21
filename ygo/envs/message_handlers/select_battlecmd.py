@@ -31,14 +31,14 @@ def select_battlecmd(duel: Duel, pl: Player):
                 pl.notify(pl._("attack %s: %s (%d)") % (spec, c.get_name(), c.attack))
             else:
                 pl.notify("attack %s: %s (%d/%d)" % (spec, c.get_name(), c.attack, c.defense))
-        option = "a " + spec
+        option = spec + " a"
         specs[option] = c
         options.append(option)
     if duel.activatable:
         spec = c.get_spec(pl)
         if duel.verbose:
             pl.notify("activate %s: %s (%d/%d)" % (spec, c.get_name(), c.attack, c.defense))
-        option = "c " + spec
+        option = spec + " v"
         specs[option] = c
         options.append(option)
     if duel.to_m2:
@@ -55,10 +55,10 @@ def select_battlecmd(duel: Duel, pl: Player):
     def r(caller):
         if caller.text in specs:
             card = specs[caller.text]
-            if caller.text[0] == "c":
+            if caller.text[-1] == "v":
                 seq = duel.activatable.index(card)
                 duel.set_responsei((seq << 16))
-            elif caller.text[0] == "a":
+            elif caller.text[-1] == "a":
                 seq = duel.attackable.index(card)
                 duel.set_responsei((seq << 16) + 1)
         elif caller.text == "e" and duel.to_ep:

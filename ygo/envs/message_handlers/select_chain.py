@@ -81,17 +81,8 @@ def select_chain(duel: Duel, player: int, size, spe_count, forced, chains):
         if caller.text == 'c' and not forced:
             duel.set_responsei(-1)
             return
-        if caller.text.startswith('i'):
-            info = True
-            caller.text = caller.text[1:]
-        else:
-            info = False
-        if caller.text not in specs:
-            raise ValueError("Invalid spec.")
         card = specs[caller.text]
         idx = card.chain_index
-        if info:
-            raise NotImplementedError
         duel.set_responsei(idx)
     return options, r
 

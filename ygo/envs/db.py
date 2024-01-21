@@ -13,6 +13,7 @@ class CardDataset:
 
         self.cards = {}
         self.texts = {}
+        self.code2ids = {}
     
     def init_from_deck(self, deck):
         codes = load_deck(deck)
@@ -27,9 +28,14 @@ class CardDataset:
                 if row is None:
                     raise ValueError("Card %d not found in texts" % code)
                 self.texts[code] = row
+            if code not in self.code2ids:
+                self.code2ids[code] = len(self.code2ids)
 
     def get_card(self, code):
         return self.cards[code]
 
     def get_text(self, code):
         return self.texts[code]
+
+    def get_id(self, code):
+        return self.code2ids[code]

@@ -28,7 +28,8 @@ def msg_idlecmd(duel: Duel, data):
 def idle_action(duel: Duel, pl: Player):
     def prompt():
         options = []
-        pl.notify(pl._("Select a card and action to perform."))
+        if duel.verbose:
+            pl.notify(pl._("Select a card and action to perform."))
 
         summonable = [card.get_spec(pl) for card in duel.summonable]
         spsummon = [card.get_spec(pl) for card in duel.spsummon]
@@ -38,36 +39,44 @@ def idle_action(duel: Duel, pl: Player):
 
         for card in summonable:
             options.append(card + " s")
-            pl.notify(card + " s" + ": " + pl._("Summon this card in face-up attack position."))
+            if duel.verbose:
+                pl.notify(card + " s" + ": " + pl._("Summon this card in face-up attack position."))
         for card in idle_set:
             options.append(card + " t")
-            pl.notify(card + " t" + ": " + pl._("Set this card."))
+            if duel.verbose:
+                pl.notify(card + " t" + ": " + pl._("Set this card."))
         for card in mset:
             options.append(card + " m")
-            pl.notify(card + " m" + ": " + pl._("Summon this card in face-down defense position."))
+            if duel.verbose:
+                pl.notify(card + " m" + ": " + pl._("Summon this card in face-down defense position."))
         for card in repos:
             options.append(card + " r")
-            pl.notify(card + " r" + ": " + pl._("reposition this card."))
+            if duel.verbose:
+                pl.notify(card + " r" + ": " + pl._("reposition this card."))
         for card in spsummon:
             options.append(card + " c")
-            pl.notify(card + " c" + ": " + pl._("Special summon this card."))
+            if duel.verbose:
+                pl.notify(card + " c" + ": " + pl._("Special summon this card."))
         for card in duel.idle_activate:
             activate_count = duel.idle_activate.count(card)
             if activate_count > 1:
                 raise NotImplementedError("Activate more than one effect.")
             spec = card.get_spec(pl)
             options.append(spec + " v")
-            effect_description = card.get_effect_description(pl, 0)
-            pl.notify(spec + " v" + ": " + effect_description)
+            if duel.verbose:
+                effect_description = card.get_effect_description(pl, 0)
+                pl.notify(spec + " v" + ": " + effect_description)
 
         if duel.to_bp:
             options.append("b")
-            pl.notify(pl._("b: Enter the battle phase."))
+            if duel.verbose:
+                pl.notify(pl._("b: Enter the battle phase."))
         if duel.to_ep:
             # always go to bp if possible
             if not duel.to_bp:
                 options.append("e")
-            pl.notify(pl._("e: End phase."))
+                if duel.verbose:
+                    pl.notify(pl._("e: End phase."))
         return options, r
 
 

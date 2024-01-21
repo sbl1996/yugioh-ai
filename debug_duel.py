@@ -4,10 +4,10 @@ import sqlite3
 import re
 if not hasattr(re, '_pattern_type'):
 	re._pattern_type = re.Pattern
-from ygo import duel as dm
-from ygo import globals as glb
+from ygo.game import duel as dm
+from ygo.game import globals as glb
 from ygo import server
-from ygo.language_handler import LanguageHandler
+from ygo.game.language_handler import LanguageHandler
 
 class FakePlayer:
 	def __init__(self, i, deck):

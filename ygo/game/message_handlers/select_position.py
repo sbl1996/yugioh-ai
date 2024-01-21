@@ -1,9 +1,8 @@
-from ygo.envs.glb import register_message
 import io
 
-from ygo.envs.card import Card
+from ygo.game.card import Card
 from ygo.constants import POSITION
-from ygo.envs.duel import Duel, Decision
+from ygo.game.duel import Duel, Decision
 from ygo.utils import parse_ints
 
 
@@ -31,19 +30,16 @@ def select_position(duel: Duel, player: int, card, positions):
             valid_positions.append(i)
 
     def prompt():
-        if duel.verbose:
-            pl.notify(pl._("Select position for %s:") % (card.get_name(),))
+        pl.notify(pl._("Select position for %s:") % (card.get_name(pl),))
         options = []
         for i, pi in enumerate(valid_positions):
+            name = menus[pi][1]
             options.append(str(i + 1))
-            if duel.verbose:
-                name = menus[pi][1]
-                pl.notify("%d: %s" % (i + 1, name))
+            pl.notify("%d: %s" % (i + 1, name))
         pl.notify(Decision, r, options)
 
     def error(text):
-        if duel.verbose:
-            pl.notify(text)
+        pl.notify(text)
         return prompt()
 
     def r(caller):
@@ -57,6 +53,6 @@ def select_position(duel: Duel, player: int, card, positions):
     prompt()
 
 
-register_message({19: msg_select_position})
+MESSAGES = {19: msg_select_position}
 
 

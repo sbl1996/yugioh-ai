@@ -6,9 +6,9 @@ import argparse
 import re
 from collections import defaultdict
 
-from ygo import duel as dm
-from ygo import globals as glb
-from ygo.language_handler import LanguageHandler
+from ygo.game import duel as dm
+from ygo.game import globals as glb
+from ygo.game.language_handler import LanguageHandler
 
 
 class Response:

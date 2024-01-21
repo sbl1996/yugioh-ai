@@ -3,7 +3,6 @@ import io
 
 from ygo.envs.card import Card
 from ygo.constants import POSITION, REASON, LOCATION, TYPE, INFORM
-import ygo.exceptions
 from ygo.envs.duel import Duel
 
 
@@ -20,10 +19,7 @@ def msg_move(duel: Duel, data):
 def move(duel: Duel, code, location, newloc, reason):
 	if not duel.verbose:
 		return
-	try:
-		card = Card(code)
-	except ygo.exceptions.CardNotFoundError:
-		return
+	card = Card(code)
 	card.set_location(location)
 	cnew = Card(code)
 	cnew.set_location(newloc)
