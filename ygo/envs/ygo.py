@@ -333,7 +333,10 @@ class YGOEnv(gym.Env):
         self.next(process_first=False, data=data)
 
         terminated = self._terminated
-        reward = 1 if terminated and self.duel.winner == self._player else 0
+        if terminated:
+            reward = 1 if self.duel.winner == self._player else -1
+        else:
+            reward = 0
 
         observation = self._get_obs()
         info = self._get_info()

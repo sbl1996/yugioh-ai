@@ -10,7 +10,7 @@ class RecordEpisodeStatistics(gym.Wrapper):
         self.episode_lengths = None
 
     def reset(self, **kwargs):
-        observations, infos = super().reset(**kwargs)
+        observations, infos = self.env.reset(**kwargs)
         self.episode_returns = np.zeros(self.num_envs, dtype=np.float32)
         self.episode_lengths = np.zeros(self.num_envs, dtype=np.int32)
         self.lives = np.zeros(self.num_envs, dtype=np.int32)
@@ -25,8 +25,8 @@ class RecordEpisodeStatistics(gym.Wrapper):
         self.episode_lengths += 1
         self.returned_episode_returns[:] = self.episode_returns
         self.returned_episode_lengths[:] = self.episode_lengths
-        self.episode_returns *= 1 - terminated
-        self.episode_lengths *= 1 - terminated
+        self.episode_returns *= 1 - dones
+        self.episode_lengths *= 1 - dones
         infos["r"] = self.returned_episode_returns
         infos["l"] = self.returned_episode_lengths
         return (

@@ -56,11 +56,15 @@ class Agent(nn.Module):
         ])
 
         self.action_norm = nn.LayerNorm(c, elementwise_affine=False)
-        self.value_head = nn.Linear(c, 1)
+        self.value_head = nn.Sequential(
+            nn.Linear(c, c // 4),
+            nn.ReLU(),
+            nn.Linear(c // 4, 1),
+        )
 
     def forward(self, x):
         x_cards = x['cards']
-        x_global = x['global']
+        x_global = x['global'].float()
         x_actions = x['actions']
         float_dtype = x_global.dtype
         
@@ -123,4 +127,5 @@ class Agent(nn.Module):
             f_actions = layer(f_actions, f_cards, tgt_key_padding_mask=mask)
         f_actions = self.action_norm(f_actions)
         values = self.value_head(f_actions)[..., 0]
-        return values
+        values = torch.tanh(values)
+        return values, mask
