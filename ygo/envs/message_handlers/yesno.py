@@ -10,7 +10,7 @@ def msg_yesno(duel: Duel, data):
     player = duel.read_u8(data)
     desc = duel.read_u32(data)
     options, r = yesno(duel, player, desc)
-    return ActionRequired("yesno", options, r, data.read())
+    return ActionRequired("yesno", player, options, r, data.read())
 
 
 def yesno(duel: Duel, player: int, desc):

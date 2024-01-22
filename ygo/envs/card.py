@@ -55,11 +55,10 @@ class Card(object):
 
 		row = glb.db.get_text(code)
 		lstr = []
-		for i in range(3, len(row), 1):
-			lstr.append(row[i])
+		for j in range(3, len(row), 1):
+			lstr.append(row[j])
 
 		try:
-
 			if i == 0 or lstr[i-code*16].strip() == '':
 				s = pl._("Activate this card.")
 			else:

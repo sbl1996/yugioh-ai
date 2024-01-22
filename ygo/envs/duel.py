@@ -26,8 +26,9 @@ class Decision:
 
 class ActionRequired:
 
-    def __init__(self, msg, options, callback, data):
+    def __init__(self, msg, player, options, callback, data):
         self.msg = msg
+        self.player = player
         self.options = options
         self.callback = callback
         self.data = data

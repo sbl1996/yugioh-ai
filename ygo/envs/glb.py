@@ -19,7 +19,7 @@ def register_message(d):
 
 _languages = {
     "english": "en",
-    "chinese": "cn",
+    "chinese": "zh",
 }
 
 def init(lang):

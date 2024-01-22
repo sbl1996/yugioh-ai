@@ -27,7 +27,7 @@ def msg_select_chain(duel: Duel, data):
         return data.read()
     else:
         options, r = select_chain(duel, player, size, spe_count, forced, chains)
-        return ActionRequired("select_chain", options, r, data.read())
+        return ActionRequired("select_chain", player, options, r, data.read())
 
 
 def select_chain(duel: Duel, player: int, size, spe_count, forced, chains):

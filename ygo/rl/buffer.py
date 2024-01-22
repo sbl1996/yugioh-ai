@@ -619,7 +619,6 @@ class DMCBuffer:
     def get_data_indices(self):
         if not self.full:
             indices = np.arange(self.start.min())
-            print(self.full, 0, self.start.min(), self.pos, self.start)
         else:
             # if np.all(pos >= self.start):
             #     indices = np.arange(pos, self.start.min() + self.buffer_size) % self.buffer_size
@@ -629,7 +628,6 @@ class DMCBuffer:
             start = self.pos
             end = np.where(self.pos >= self.start, self.start + self.buffer_size, self.start).min()
             indices = np.arange(start, end) % self.buffer_size
-            print(self.full, start, end, self.pos, self.start)
         return indices
 
     def _get_samples(self, batch_inds: np.ndarray):
@@ -719,7 +717,6 @@ class DMCDictBuffer:
     def get_data_indices(self):
         if not self.full:
             indices = np.arange(self.start.min())
-            print(self.full, 0, self.start.min(), self.pos, self.start)
         else:
             # if np.all(pos >= self.start):
             #     indices = np.arange(pos, self.start.min() + self.buffer_size) % self.buffer_size
@@ -729,7 +726,6 @@ class DMCDictBuffer:
             start = self.pos
             end = np.where(self.pos >= self.start, self.start + self.buffer_size, self.start).min()
             indices = np.arange(start, end) % self.buffer_size
-            print(self.full, start, end, self.pos, self.start)
         return indices
 
     def _get_samples(self, batch_inds: np.ndarray):

@@ -12,7 +12,7 @@ def msg_select_place(duel: Duel, data):
 	if count == 0: count = 1
 	flag = duel.read_u32(data)
 	options, r = select_place(duel, player, count, flag)
-	return ActionRequired("select_place", options, r, data.read())
+	return ActionRequired("select_place", player, options, r, data.read())
 
 
 def select_place(duel: Duel, player: int, count, flag):

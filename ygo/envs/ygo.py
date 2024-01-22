@@ -1,3 +1,4 @@
+import random
 import numpy as np
 
 import gymnasium as gym
@@ -26,7 +27,7 @@ def type2id(v):
     return np.minimum((_types & v).astype(np.uint8), 1)
 
 phase2id = {
-    p: one_hot(i, 10)
+    p: i
     for i, p in enumerate(PHASES)
 }
 
@@ -98,24 +99,49 @@ class Response:
         self.text = text
 
 
-class FakePlayer(Player):
+class GreedyAI(Player):
 
     def notify(self, arg1, *args, **kwargs):
-        if self.verbose:
+        if isinstance(arg1, ActionRequired):
+            ar = arg1
+            ar.callback(Response(ar.options[0]))
+        elif self.verbose:
             print(self.duel_player, arg1)
-    
+
+
+class HumanPlayer(Player):
+
+    def notify(self, arg1, *args, **kwargs):
+        if isinstance(arg1, ActionRequired):
+            ar = arg1
+            options = ar.options
+            print(self.duel_player, ar.msg)
+            while True:
+                chosen = input()
+                if chosen in options:
+                    break
+                else:
+                    print(self.duel_player, "Choose from ", options)
+            ar.callback(Response(chosen))
+        elif self.verbose:
+            print(self.duel_player, arg1)
+
+
+def float_transform(x):
+    return divmod(x % 65536, 256)
+
 
 class YGOEnv(gym.Env):
 
-    def __init__(self, deck1, deck2, player=0, mode='single', verbose=False, max_actions=16):
+    def __init__(self, deck1, deck2, player=0, mode='train', verbose=False, max_actions=16):
         self.mode = mode
         self.verbose = verbose
         self.max_actions = max_actions
 
         self.observation_space = spaces.Dict(
             {
-                "cards": spaces.Box(0, 255, shape=(55 * 2, 65), dtype=np.uint8),
-                "global": spaces.Box(0, 255, shape=(44,), dtype=np.uint8),
+                "cards": spaces.Box(0, 255, shape=(55 * 2, 37), dtype=np.uint8),
+                "global": spaces.Box(0, 255, shape=(7,), dtype=np.uint8),
                 "actions": spaces.Box(0, 255, shape=(max_actions, 7), dtype=np.uint8),
             }
         )
@@ -144,24 +170,24 @@ class YGOEnv(gym.Env):
         ]:
             if opponent and hide_for_opponent:
                 n_cards = lib.query_field_count(duel.duel, player, location)
-                feat[offset:offset+n_cards, 1] = 1
-                feat[offset:offset+n_cards, 2] = location2id[location]
+                feat[offset:offset+n_cards, 1] = location2id[location]
+                feat[offset:offset+n_cards, 3] = 1
                 offset += n_cards
             else:
                 cards = duel.get_cards_in_location(player, location)
                 for card in cards:
                     seq = card.sequence + 1
                     feat[offset, 0] = glb.db.get_id(card.code)
-                    feat[offset, 1] = 1 if opponent else 0
-                    feat[offset, 2] = location2id[card.location]
-                    feat[offset, 3] = seq
+                    feat[offset, 1] = location2id[card.location]
+                    feat[offset, 2] = seq
+                    feat[offset, 3] = 1 if opponent else 0
                     feat[offset, 4] = position2id[card.position]
                     feat[offset, 5] = attribute2id[card.attribute]
                     feat[offset, 6] = race2id[card.race]
                     feat[offset, 7] = card.level
-                    feat[offset, 8:33] = type2id(card.type)
-                    feat[offset, 33:49] = float2feat(card.attack // 25)
-                    feat[offset, 49:65] = float2feat(card.defense // 25)
+                    feat[offset, 8:10] = float_transform(card.attack)
+                    feat[offset, 10:12] = float_transform(card.defense)
+                    feat[offset, 12:37] = type2id(card.type)
                     offset += 1
 
                     spec = "o" if opponent else ""
@@ -169,14 +195,14 @@ class YGOEnv(gym.Env):
                     spec += str(seq)
                     spec2index[spec] = offset
 
-    def _set_obs_of_global(self, feat, player, opponent):
+    def _set_obs_of_global(self, feat, player):
         duel = self.duel
-        me, oppo = (player, 1 - player) if not opponent else (1 - player, player)
-        feat[0:16] = float2feat(duel.lp[me])
-        feat[16:32] = float2feat(duel.lp[oppo])
-        feat[32:42] = phase2id[self.duel.current_phase]
-        feat[42] = 1 if me == 0 else 0
-        feat[43] = me == duel.tp
+        me, oppo = player, 1 - player
+        feat[0:2] = float_transform(duel.lp[me])
+        feat[2:4] = float_transform(duel.lp[oppo])
+        feat[4] = phase2id[self.duel.current_phase]
+        feat[5] = 1 if me == 0 else 0
+        feat[6] = me == duel.tp
 
     def _set_obs_of_action(
         self, feat, i, msg, spec=None, act=None, yesno=None, phase=None, cancel=None, position=None):
@@ -200,7 +226,7 @@ class YGOEnv(gym.Env):
         options = ar.options
         if len(options) > self.max_actions:
             print(msg, options)
-            raise NotImplementedError("Too many options")
+            options = random.sample(options, self.max_actions)
         if msg == 'idle_action':
             for i, option in enumerate(options):
                 if option in ['b', 'e']:
@@ -236,17 +262,18 @@ class YGOEnv(gym.Env):
             raise NotImplementedError(f"Unknown message: {msg}")
 
     def _get_obs(self):
-        card_feats = np.zeros((55 * 2, 65), dtype=np.uint8)
-        global_feats = np.zeros(44, dtype=np.uint8)
-        action_feats = np.zeros((self.max_actions, 7), dtype=np.uint8)
+        feats = {
+            key: np.zeros(space.shape, dtype=space.dtype)
+            for key, space in self.observation_space.spaces.items()
+        }
 
         if self.duel.duel is not None:
             self._spec2index = {}
-            self._set_obs_of_card(card_feats, self._spec2index, self._player, False)
-            self._set_obs_of_card(card_feats, self._spec2index, 1 - self._player, True)
-            self._set_obs_of_global(global_feats, self._player, False)
-            self._set_obs_of_actions(action_feats)
-        return {"cards": card_feats, "global": global_feats, "actions": action_feats}
+            self._set_obs_of_card(feats["cards"], self._spec2index, self._player, False)
+            self._set_obs_of_card(feats["cards"], self._spec2index, 1 - self._player, True)
+            self._set_obs_of_global(feats["global"], self._player)
+            self._set_obs_of_actions(feats["actions"])
+        return feats
 
     def _get_info(self):
         options = None
@@ -263,9 +290,15 @@ class YGOEnv(gym.Env):
             ["Alice", self.deck1, 8000],
             ["Bob", self.deck2, 8000],
         ]
-        players = [
-            FakePlayer(deck, nickname, lp)
-            for nickname, deck, lp in configs
+        player1 = GreedyAI
+        player2 = GreedyAI if self.mode == 'train' else HumanPlayer
+        if self._player == 1:
+            player1, player2 = player2, player1
+        configs[0].append(player1)
+        configs[1].append(player2)
+        self.players = [
+            player_cls(deck, nickname, lp)
+            for nickname, deck, lp, player_cls in configs
         ]
 
         self._action_required = None
@@ -273,7 +306,7 @@ class YGOEnv(gym.Env):
         self._terminated = False
 
         self.duel = Duel(seed=seed, verbose=self.verbose)
-        self.duel.init(players)
+        self.duel.init(self.players)
 
         self.next(process_first=True)
 
@@ -298,8 +331,8 @@ class YGOEnv(gym.Env):
                     ret = fn(self.duel, data)
                     if isinstance(ret, ActionRequired):
                         ar = ret
-                        if self.duel.tp == self._player:
-                            if ret.msg == 'select_place':
+                        if ar.player == self._player:
+                            if ar.msg == 'select_place':
                                 ar.callback(Response(ar.options[0]))
                                 data = ar.data
                             elif len(ar.options) == 1:
@@ -309,7 +342,7 @@ class YGOEnv(gym.Env):
                                 self._action_required = ar
                                 return
                         else:
-                            ar.callback(Response(ar.options[0]))
+                            self.players[ar.player].notify(ar)
                             data = ar.data
                     else:
                         data = ret
@@ -328,6 +361,9 @@ class YGOEnv(gym.Env):
         options = ar.options
         option = options[action]
         ar.callback(Response(option))
+        if self.verbose:
+            print("Action:", ar.msg)
+            print(self._player, "chose", option, "in", options)
         data = ar.data
 
         self.next(process_first=False, data=data)

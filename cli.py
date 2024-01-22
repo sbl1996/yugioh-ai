@@ -1,3 +1,4 @@
+import os
 import time
 import itertools
 import random
@@ -9,6 +10,7 @@ from collections import defaultdict
 from ygo.game import duel as dm
 from ygo.game import globals as glb
 from ygo.game.language_handler import LanguageHandler
+from ygo.utils import get_root_directory
 
 
 class Response:
@@ -115,7 +117,8 @@ def main():
     glb.language_handler = LanguageHandler()
     glb.language_handler.add(lang, short)
     glb.language_handler.set_primary_language(lang)
-    glb.db = sqlite3.connect(f"locale/{short}/cards.cdb")
+    database = os.path.join(get_root_directory(), 'locale', short, 'cards.cdb')
+    glb.db = sqlite3.connect(database)
     glb.db.row_factory = sqlite3.Row
 
     configs = [

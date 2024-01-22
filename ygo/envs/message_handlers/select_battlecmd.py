@@ -15,7 +15,7 @@ def msg_select_battlecmd(duel: Duel, data):
     duel.to_ep = duel.read_u8(data)
     pl = duel.players[player]
     options, r = select_battlecmd(duel, pl)
-    return ActionRequired("select_battlecmd", options, r, data.read())
+    return ActionRequired("select_battlecmd", player, options, r, data.read())
 
 
 def select_battlecmd(duel: Duel, pl: Player):
@@ -28,16 +28,16 @@ def select_battlecmd(duel: Duel, pl: Player):
         spec = c.get_spec(pl)
         if duel.verbose:
             if c.type & TYPE.LINK:
-                pl.notify(pl._("attack %s: %s (%d)") % (spec, c.get_name(), c.attack))
+                pl.notify(pl._("%s a: %s (%d) attack") % (spec, c.get_name(), c.attack))
             else:
-                pl.notify("attack %s: %s (%d/%d)" % (spec, c.get_name(), c.attack, c.defense))
+                pl.notify("%s a: %s (%d/%d) attack" % (spec, c.get_name(), c.attack, c.defense))
         option = spec + " a"
         specs[option] = c
         options.append(option)
     if duel.activatable:
         spec = c.get_spec(pl)
         if duel.verbose:
-            pl.notify("activate %s: %s (%d/%d)" % (spec, c.get_name(), c.attack, c.defense))
+            pl.notify("%s v: activate %s (%d/%d)" % (spec, c.get_name(), c.attack, c.defense))
         option = spec + " v"
         specs[option] = c
         options.append(option)
@@ -47,10 +47,10 @@ def select_battlecmd(duel: Duel, pl: Player):
             pl.notify(pl._("m: Main phase 2."))
     if duel.to_ep:
         # always go to m2 if possible
-        # if not duel.to_m2:
-        options.append("e")
-        if duel.verbose:
-            pl.notify(pl._("e: End phase."))
+        if not duel.to_m2:
+            options.append("e")
+            if duel.verbose:
+                pl.notify(pl._("e: End phase."))
 
     def r(caller):
         if caller.text in specs:

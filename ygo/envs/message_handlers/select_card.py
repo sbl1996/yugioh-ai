@@ -30,7 +30,7 @@ def msg_select_tribute(duel: Duel, data):
         cards.append(card)
 
     options, r = select_tribute(duel, player, cancelable, min, max, cards)
-    return ActionRequired("select_tribute", options, r, data.read())
+    return ActionRequired("select_tribute", player, options, r, data.read())
 
 
 def msg_select_card(duel: Duel, data):
@@ -48,7 +48,7 @@ def msg_select_card(duel: Duel, data):
         card.set_location(loc)
         cards.append(card)
     options, r = select_card(duel, player, cancelable, min, max, cards)
-    return ActionRequired("select_card", options, r, data.read())
+    return ActionRequired("select_card", player, options, r, data.read())
 
 
 def select_card(

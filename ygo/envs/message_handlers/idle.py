@@ -22,7 +22,7 @@ def msg_idlecmd(duel: Duel, data):
     assert duel.tp == player
     pl = duel.players[duel.tp]
     options, r = idle_action(duel, pl)
-    return ActionRequired("idle_action", options, r, data.read())
+    return ActionRequired("idle_action", duel.tp, options, r, data.read())
 
 
 def idle_action(duel: Duel, pl: Player):
@@ -31,32 +31,18 @@ def idle_action(duel: Duel, pl: Player):
         if duel.verbose:
             pl.notify(pl._("Select a card and action to perform."))
 
-        summonable = [card.get_spec(pl) for card in duel.summonable]
-        spsummon = [card.get_spec(pl) for card in duel.spsummon]
-        repos = [card.get_spec(pl) for card in duel.repos]
-        mset = [card.get_spec(pl) for card in duel.idle_mset]
-        idle_set = [card.get_spec(pl) for card in duel.idle_set]
-
-        for card in summonable:
-            options.append(card + " s")
-            if duel.verbose:
-                pl.notify(card + " s" + ": " + pl._("Summon this card in face-up attack position."))
-        for card in idle_set:
-            options.append(card + " t")
-            if duel.verbose:
-                pl.notify(card + " t" + ": " + pl._("Set this card."))
-        for card in mset:
-            options.append(card + " m")
-            if duel.verbose:
-                pl.notify(card + " m" + ": " + pl._("Summon this card in face-down defense position."))
-        for card in repos:
-            options.append(card + " r")
-            if duel.verbose:
-                pl.notify(card + " r" + ": " + pl._("reposition this card."))
-        for card in spsummon:
-            options.append(card + " c")
-            if duel.verbose:
-                pl.notify(card + " c" + ": " + pl._("Special summon this card."))
+        for cards, cmd, desc in [
+            (duel.summonable, "s", "Summon %s in face-up attack position."),
+            (duel.idle_set, "t", "Set %s."),
+            (duel.idle_mset, "m", "Summon %s in face-down defense position."),
+            (duel.repos, "r", "Reposition %s."),
+            (duel.spsummon, "c", "Special summon %s."),
+        ]:
+            for card in cards:
+                spec = card.get_spec(pl)
+                options.append(spec + " " + cmd)
+                if duel.verbose:
+                    pl.notify(spec + " " + cmd + ": " + pl._(desc % card.name))
         for card in duel.idle_activate:
             activate_count = duel.idle_activate.count(card)
             if activate_count > 1:
@@ -64,7 +50,8 @@ def idle_action(duel: Duel, pl: Player):
             spec = card.get_spec(pl)
             options.append(spec + " v")
             if duel.verbose:
-                effect_description = card.get_effect_description(pl, 0)
+                ind = duel.idle_activate[0].data
+                effect_description = card.get_effect_description(pl, ind)
                 pl.notify(spec + " v" + ": " + effect_description)
 
         if duel.to_bp:
