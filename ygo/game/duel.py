@@ -19,7 +19,7 @@ import natsort
 from .card import Card
 from ..constants import TYPE, LOCATION, POSITION, QUERY, INFORM
 from . import globals
-from .. import message_handlers_a
+from . import message_handlers
 
 class Decision:
     pass
@@ -428,7 +428,7 @@ class Duel:
 
         all_handlers = {}
 
-        for importer, modname, ispkg in pkgutil.iter_modules(message_handlers_a.__path__):
+        for importer, modname, ispkg in pkgutil.iter_modules(message_handlers.__path__):
             if not ispkg:
                 try:
                     m = importer.find_module(modname).load_module(modname)

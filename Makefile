@@ -1,6 +1,6 @@
-setup: py_setup script locale/en/cards.cdb locale/zh/cards.cdb
+setup: script locale/en/cards.cdb locale/zh/cards.cdb py_setup
 
-py_setup:
+py_setup: libygo.so
 	pip install -e .
 
 script: vendor/ygopro-scripts
@@ -10,7 +10,7 @@ libygo.so: vendor/lua-5.3.5/src/liblua.a vendor/ygopro-core
 	g++ -shared -fPIC -o $@ vendor/ygopro-core/*.cpp -Ivendor/lua-5.3.5/src -Lvendor/lua-5.3.5/src -llua -std=c++14
 
 vendor/lua-5.3.5:
-	wget https://www.lua.org/ftp/lua-5.3.5.tar.gz
+	wget --no-check-certificate https://www.lua.org/ftp/lua-5.3.5.tar.gz
 	cd vendor; tar xvf ../lua-5.3.5.tar.gz
 	rm lua-5.3.5.tar.gz
 
@@ -21,7 +21,7 @@ vendor/ygopro-core:
 	wget https://github.com/Fluorohydride/ygopro-core/archive/master.zip
 	unzip -q master.zip -d vendor; mv vendor/ygopro-core-master $@
 	rm master.zip
-	cd $@ && patch -p0 < ../../etc/ygopro-core.patch && sed -i '14i\#include <cstring>' field.h
+	cd $@ && sed -i '831c\int32 is_declarable(card_data const& cd, const std::vector<uint32>& opcode) {' playerop.cpp && sed -i '14i\#include <cstring>' field.h
 
 vendor/ygopro-scripts:
 	wget https://github.com/Fluorohydride/ygopro-scripts/archive/master.zip

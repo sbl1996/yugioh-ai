@@ -1,7 +1,7 @@
 import io
 
 from ygo.game.card import Card
-from ygo.message_handlers.decktop import decktop
+from ygo.game.message_handlers.decktop import decktop
 
 
 def msg_tag_swap(self, data):
