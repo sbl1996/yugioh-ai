@@ -37,6 +37,8 @@ if __name__ == "__main__":
 
 
     agent = Agent(128, 2, 2).to(device)
+    agent = torch.compile(agent, mode='reduce-overhead')
+    agent.load_state_dict(torch.load("scratch/checkpoints/1.pt", map_location=device))
 
     obs, info = env.reset(seed=seed)
 
