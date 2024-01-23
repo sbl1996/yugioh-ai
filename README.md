@@ -1,6 +1,6 @@
 # Yugioh AI
 
-Yugioh AI uses large language models (LLM) to play Yu-Gi-Oh. It is inspired by [yugioh-ai](https://github.com/melvinzhang/yugioh-ai]) and [yugioh-game](https://github.com/tspivey/yugioh-game), and uses [ygopro-core](https://github.com/Fluorohydride/ygopro-core).
+Yugioh AI uses large language models (LLM) and RL to play Yu-Gi-Oh. It is inspired by [yugioh-ai](https://github.com/melvinzhang/yugioh-ai]) and [yugioh-game](https://github.com/tspivey/yugioh-game), and uses [ygopro-core](https://github.com/Fluorohydride/ygopro-core).
 
 ## Usage
 
@@ -28,3 +28,6 @@ You can set `--seed` to a fixed value to get deterministic results.
 
 The implementation is initially based on [yugioh-game](https://github.com/tspivey/yugioh-game). To provide a clean game environment, it removes all server code and only keeps basic duel-related classes and message handlers.
 To implement the AI, inspired by [yugioh-ai](https://github.com/melvinzhang/yugioh-ai]), every message handler also provides all possible actions that can be taken in response to the message.
+
+## Notes
+Never 

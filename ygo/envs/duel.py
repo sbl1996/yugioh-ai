@@ -106,10 +106,14 @@ if DUEL_AVAILABLE:
 
 
 class Duel:
-    def __init__(self, seed=None, verbose=False):
+    def __init__(self, seed=None, verbose=False, np_random=None):
         self.buf = ffi.new('char[]', 4096)
+        self._np_random = np_random
         if seed is None:
-            seed = random.randint(0, 0xffffffff)
+            if np_random is None:
+                seed = random.randint(0, 0xffffffff)
+            else:
+                seed = np_random.integers(0, 0xffffffff)
         self.seed = seed
         self.duel = lib.create_duel(seed)
         self.keep_processing = False
@@ -178,7 +182,10 @@ class Duel:
             cards.append(cc)
 
         if shuffle is True:
-            random.shuffle(c)
+            if self._np_random is None:
+                random.shuffle(c)
+            else:
+                self._np_random.shuffle(c)
 
         conv = lambda lvl: lvl[1]
         fusion.sort(key=conv, reverse=True)

@@ -1,5 +1,7 @@
+checkpoints/
+runs/
+k8s_job/
 script
-scratch
 expansions
 locale/*.cdb
 locale/*/*.cdb

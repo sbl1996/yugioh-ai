@@ -17,25 +17,28 @@ def make_bin_params(x_max=32000, n_bins=32, sig_bins=24):
     intervals = torch.cat([points[0:1], points[1:] - points[:-1]], dim=0)
     return points, intervals
 
+
 class Agent(nn.Module):
 
-    def __init__(self, channels=128, num_card_layers=2, num_action_layers=2):
+    def __init__(self, channels=128, num_card_layers=2, num_action_layers=2, bias=False):
         super(Agent, self).__init__()
         c = channels
         self.location_embed = nn.Embedding(9, c)
         self.seq_embed = nn.Embedding(41, c)
 
+        linear = lambda in_features, out_features: nn.Linear(in_features, out_features, bias=bias)
+
         self.id_text_embed = nn.Embedding(110, 1024)
-        self.id_embed = nn.Linear(1024, c // 2)
+        self.id_embed = linear(1024, c // 2)
         self.id_norm = nn.LayerNorm(c // 2, elementwise_affine=False)
 
         c_num = c // 8
         n_bins = 32
         self.num_embed = nn.Sequential(
-            nn.Linear(32, c_num),
+            linear(n_bins, c_num),
             nn.ReLU(),
         )
-        bin_points, bin_intervals = make_bin_params()
+        bin_points, bin_intervals = make_bin_params(n_bins=n_bins)
         self.bin_points = nn.Parameter(bin_points, requires_grad=False)
         self.bin_intervals = nn.Parameter(bin_intervals, requires_grad=False)
 
@@ -44,23 +47,24 @@ class Agent(nn.Module):
         self.attribute_embed = nn.Embedding(8, c // 16)
         self.race_embed = nn.Embedding(27, c // 16)
         self.level_embed = nn.Embedding(14, c // 16)
-        self.type_embed = nn.Linear(25, c // 16)
-        self.atk_embed = nn.Linear(c_num, c // 16)
-        self.def_embed = nn.Linear(c_num, c // 16)
+        self.type_embed = linear(25, c // 16)
+        self.atk_embed = linear(c_num, c // 16)
+        self.def_embed = linear(c_num, c // 16)
         self.feat_norm = nn.LayerNorm(c // 2, elementwise_affine=False)
 
         self.na_card_embed = nn.Parameter(torch.randn(1, c))
 
+        num_heads = max(2, c // 128)
         self.card_net = nn.ModuleList([
             nn.TransformerEncoderLayer(
-                c, c // 128, c * 4, dropout=0.0, batch_first=True, norm_first=True)
+                c, num_heads, c * 4, dropout=0.0, batch_first=True, norm_first=True)
             for i in range(num_card_layers)
         ])
 
         self.card_norm = nn.LayerNorm(c, elementwise_affine=False)
 
-        self.lp_embed = nn.Linear(c_num, c // 4)
-        self.oppo_lp_embed = nn.Linear(c_num, c // 4)
+        self.lp_embed = linear(c_num, c // 4)
+        self.oppo_lp_embed = linear(c_num, c // 4)
         self.phase_embed = nn.Embedding(10, c // 4)
         self.if_first_embed = nn.Embedding(2, c // 8)
         self.is_my_turn_embed = nn.Embedding(2, c // 8)
@@ -82,9 +86,10 @@ class Agent(nn.Module):
 
         self.a_card_proj = nn.Linear(c, c // 2)
 
+        num_heads = max(2, c // 128)
         self.action_net = nn.ModuleList([
             nn.TransformerDecoderLayer(
-                c, c // 128, c * 4, dropout=0.0, batch_first=True, norm_first=True)
+                c, num_heads, c * 4, dropout=0.0, batch_first=True, norm_first=True)
             for i in range(num_action_layers)
         ])
 
@@ -178,5 +183,5 @@ class Agent(nn.Module):
         f_actions = self.action_norm(f_actions)
         values = self.value_head(f_actions)[..., 0]
         values = torch.tanh(values)
-        values = torch.where(mask, torch.full_like(values, -2), values)
+        values = torch.where(mask, torch.full_like(values, -1.01), values)
         return values

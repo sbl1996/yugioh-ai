@@ -17,10 +17,10 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from ygo.rl.utils import RecordEpisodeStatistics
-from ygo.rl.buffer import DMCDictBuffer
 from ygo.envs import glb
 from ygo.rl.agent import Agent
-    
+from ygo.rl.buffer import DMCDictBuffer
+
 
 @dataclass
 class Args:
@@ -32,10 +32,15 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
+    compile: bool = True
+    """if toggled, model will be compiled for better performance"""
 
     # Algorithm specific arguments
     env_id: str = "yugioh-ai/YGO-v0"
     """the id of the environment"""
+    deck: str = "../deck/OldSchool.ydk"
+    """the deck to use"""
+
     total_timesteps: int = 100000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
@@ -44,7 +49,7 @@ class Args:
     """the number of parallel game environments"""
     num_steps: int = 100
     """the number of steps per env per iteration"""
-    buffer_size: int = 10000
+    buffer_size: int = 20000
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
@@ -54,9 +59,6 @@ class Args:
     """the epsilon for exploration"""
     max_grad_norm: float = 1.0
     """the maximum norm for the gradient clipping"""
-
-    deck: str = "../deck/OldSchool.ydk"
-    """the deck to use"""
 
     # to be filled in runtime
     num_iterations: int = 0
@@ -69,10 +71,7 @@ def make_env(env_id, deck, seed):
             env_id,
             deck1=deck,
             deck2=deck,
-            player=0,
-            verbose=False
         )
-        env = gym.wrappers.RecordEpisodeStatistics(env)
         env.action_space.seed(seed)
         return env
     return thunk
@@ -114,11 +113,17 @@ if __name__ == "__main__":
     action_space = envs.unwrapped.single_action_space
     envs = RecordEpisodeStatistics(envs)
 
+    # envs_eval = gym.vector.SyncVectorEnv(
+    #     [make_env(args.env_id, deck, args.seed + i) for i in range(args.num_envs)]
+    # )
+    # envs_eval = RecordEpisodeStatistics(envs_eval)
+
     agent = Agent(128, 2, 2).to(device)
-    agent = torch.compile(agent, mode='reduce-overhead')
+    if args.compile:
+        agent = torch.compile(agent, mode='reduce-overhead')
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
-    avg_returns = []
+    avg_win_rates = []
 
     rb = DMCDictBuffer(
         args.buffer_size,
@@ -172,10 +177,10 @@ if __name__ == "__main__":
                     print(f"global_step={global_step}, e_ret={episode_reward}, e_len={episode_length}")
                     writer.add_scalar("charts/episodic_return", episode_reward, global_step)
                     writer.add_scalar("charts/episodic_length", episode_length, global_step)
-                    avg_returns.append(episode_reward)
-                    if len(avg_returns) > 100:
-                        writer.add_scalar("charts/avg_episodic_return", np.average(avg_returns), global_step)
-                        avg_returns = []
+                    avg_win_rates.append(1 if episode_reward == 1 else 0)
+                    if len(avg_win_rates) > 100:
+                        writer.add_scalar("charts/avg_win_rate", np.mean(avg_win_rates), global_step)
+                        avg_win_rates = []
 
         collect_time = time.time() - collect_start
         print(f"global_step={global_step}, model_time={model_time}, env_time={env_time}, collect_time={collect_time}")
@@ -224,9 +229,35 @@ if __name__ == "__main__":
             print("SPS:", SPS)
             writer.add_scalar("charts/SPS", SPS, global_step)
 
-        if iteration % 10 == 0:
-            print(f"Saving model")
-            torch.save(agent.state_dict(), f"checkpoints/agent.pt")
+        if iteration % 100 == 0:
+            save_path = f"checkpoints/agent.pt"
+            print(f"Saving model to {save_path}")
+            torch.save(agent.state_dict(), save_path)
+
+        #     episode_rewards = []
+        #     episode_lengths = []
+        #     obs_, infos_ = envs_eval.reset(seed=args.seed)
+        #     while True:
+        #         obs_ = optree.tree_map(lambda x: torch.from_numpy(x).to(device=device), obs_)
+        #         with torch.no_grad():
+        #             values = agent(obs_)
+        #         actions = torch.argmax(values, dim=1).cpu().numpy()
+        #         obs_, rewards, dones, infos_ = envs_eval.step(actions)
+
+        #         for idx, d in enumerate(dones):
+        #             if d:
+        #                 episode_length = infos_['l'][idx]
+        #                 episode_reward = infos_['r'][idx]
+        #                 if episode_reward == -1:
+        #                     episode_reward = 0
+
+        #                 episode_lengths.append(episode_length)
+        #                 episode_rewards.append(episode_reward)
+        #                 print(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}")
+        #         if len(episode_lengths) >= 128:
+        #             print(f"avg_length={np.mean(episode_lengths)}, win_rate={np.mean(episode_rewards)}")
+        #             break
+
 
     envs.close()
     writer.close()

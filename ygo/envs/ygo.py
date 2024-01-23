@@ -10,17 +10,6 @@ from ygo.utils import load_deck
 from ygo.constants import LOCATION, location2str, position2str, type2str, attribute2str, race2str, PHASES
 
 
-float2ids = {
-    i: np.unpackbits(np.array([i], dtype=np.uint16).view(np.uint8)).reshape(16)
-    for i in range(0, 100000 // 25)
-}
-
-def float2feat(x):
-    return float2ids[int(x) // 25]
-
-def one_hot(x, n):
-    return np.eye(n, dtype=np.uint8)[x]
-
 _types = np.array(list(type2str.keys()), dtype=np.uint32)
 
 def type2id(v):
@@ -133,10 +122,11 @@ def float_transform(x):
 
 class YGOEnv(gym.Env):
 
-    def __init__(self, deck1, deck2, player=0, mode='train', verbose=False, max_actions=16):
+    def __init__(self, deck1, deck2, player='random', mode='train', verbose=False, max_actions=16):
         self.mode = mode
         self.verbose = verbose
         self.max_actions = max_actions
+        self.player = player
 
         self.observation_space = spaces.Dict(
             {
@@ -148,11 +138,10 @@ class YGOEnv(gym.Env):
 
         self.action_space = spaces.Discrete(max_actions)
 
-        self._player = player
-
         self.deck1 = load_deck(deck1)
         self.deck2 = load_deck(deck2)
 
+        self._player = None
         self._action_required: ActionRequired = None
 
     def _set_obs_of_card(self, feat, spec2index, player, opponent):
@@ -176,6 +165,8 @@ class YGOEnv(gym.Env):
             else:
                 cards = duel.get_cards_in_location(player, location)
                 for card in cards:
+                    # if offset == 94:
+                    #     print(card.location, card.position, card.name)
                     seq = card.sequence + 1
                     feat[offset, 0] = glb.db.get_id(card.code)
                     feat[offset, 1] = location2id[card.location]
@@ -200,7 +191,7 @@ class YGOEnv(gym.Env):
         me, oppo = player, 1 - player
         feat[0:2] = float_transform(duel.lp[me])
         feat[2:4] = float_transform(duel.lp[oppo])
-        feat[4] = phase2id[self.duel.current_phase]
+        feat[4] = phase2id[duel.current_phase]
         feat[5] = 1 if me == 0 else 0
         feat[6] = me == duel.tp
 
@@ -286,6 +277,10 @@ class YGOEnv(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
+        if self.player == 'random':
+            self._player = self._np_random.choice([0, 1])
+        else:
+            self._player = self.player
         configs = [
             ["Alice", self.deck1, 8000],
             ["Bob", self.deck2, 8000],
@@ -296,7 +291,7 @@ class YGOEnv(gym.Env):
             player1, player2 = player2, player1
         configs[0].append(player1)
         configs[1].append(player2)
-        self.players = [
+        players = [
             player_cls(deck, nickname, lp)
             for nickname, deck, lp, player_cls in configs
         ]
@@ -305,8 +300,8 @@ class YGOEnv(gym.Env):
         self._res = None
         self._terminated = False
 
-        self.duel = Duel(seed=seed, verbose=self.verbose)
-        self.duel.init(self.players)
+        self.duel = Duel(seed=seed, verbose=self.verbose, np_random=self._np_random)
+        self.duel.init(players)
 
         self.next(process_first=True)
 
@@ -321,7 +316,7 @@ class YGOEnv(gym.Env):
         while self.duel.started:
             if not skip_process:
                 res, data = self.duel.lib_process()
-                self.res = res
+                self._res = res
             else:
                 skip_process = False
             while data:
@@ -342,13 +337,13 @@ class YGOEnv(gym.Env):
                                 self._action_required = ar
                                 return
                         else:
-                            self.players[ar.player].notify(ar)
+                            self.duel.players[ar.player].notify(ar)
                             data = ar.data
                     else:
                         data = ret
                 else:
                     data = b''
-            if self.res & 0x20000:
+            if self._res & 0x20000:
                 break
         self._terminated = True
         self._action_required = None

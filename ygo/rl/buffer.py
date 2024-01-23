@@ -375,152 +375,6 @@ class ReplayBuffer(BaseBuffer):
         return dtype
 
 
-class DMCLocalBuffer:
-    observations: np.ndarray
-    actions: np.ndarray
-    rewards: np.ndarray
-
-    def __init__(
-        self,
-        buffer_size: int,
-        observation_space: spaces.Space,
-        action_space: spaces.Space,
-        n_envs: int = 1,
-    ):
-        self.observation_space = observation_space
-        self.action_space = action_space
-        self.obs_shape = get_obs_shape(observation_space)  # type: ignore[assignment]
-
-        self.action_dim = get_action_dim(action_space)
-        self.n_envs = n_envs
-        self.pos = 0
-        self.start = np.zeros((self.n_envs,), dtype=np.int32)
-
-        # Adjust buffer size
-        self.buffer_size = max(buffer_size // n_envs, 1)
-
-        self.observations = np.zeros((self.buffer_size, self.n_envs, *self.obs_shape), dtype=observation_space.dtype)
-        self.actions = np.zeros(
-            (self.buffer_size, self.n_envs, self.action_dim), dtype=action_space.dtype)
-        self.rewards = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
-
-    def add(
-        self,
-        obs: np.ndarray,
-        action: np.ndarray,
-        reward: np.ndarray,
-    ) -> None:
-        # Reshape needed when using multiple envs with discrete observations
-        # as numpy cannot broadcast (n_discrete,) to (n_discrete, 1)
-        if isinstance(self.observation_space, spaces.Discrete):
-            obs = obs.reshape((self.n_envs, *self.obs_shape))
-
-        # Reshape to handle multi-dim and discrete action spaces, see GH #970 #1392
-        action = action.reshape((self.n_envs, self.action_dim))
-
-        # Copy to avoid modification by reference
-        self.observations[self.pos] = np.array(obs)
-        self.actions[self.pos] = np.array(action)
-        self.rewards[self.pos] = np.array(reward)
-
-        self.pos += 1
-        if self.pos == self.buffer_size:
-            self.pos = 0
-
-    def get(self, env_ind):
-        start = self.start[env_ind]
-        pos = self.pos
-        if pos <= start:
-            end = pos + self.buffer_size
-            batch_inds = np.arange(start, end) % self.buffer_size
-        else:
-            batch_inds = np.arange(start, pos)
-        self.start[env_ind] = pos
-
-        data = (
-            self.observations[batch_inds, env_ind, :],
-            self.actions[batch_inds, env_ind, :],
-            self.rewards[batch_inds, env_ind],
-        )
-        return data
-
-
-class DMCGlobalBuffer(BaseBuffer):
-    observations: np.ndarray
-    actions: np.ndarray
-    rewards: np.ndarray
-
-    def __init__(
-        self,
-        buffer_size: int,
-        observation_space: spaces.Space,
-        action_space: spaces.Space,
-        device: Union[th.device, str] = "auto",
-    ):
-        super().__init__(buffer_size, observation_space, action_space, device, n_envs=1)
-
-        # Adjust buffer size
-        self.buffer_size = max(buffer_size, 1)
-
-        self.observations = np.zeros((self.buffer_size, *self.obs_shape), dtype=observation_space.dtype)
-        self.actions = np.zeros(
-            (self.buffer_size, self.action_dim), dtype=action_space.dtype)
-        self.rewards = np.zeros((self.buffer_size), dtype=np.float32)
-
-        if psutil is not None:
-            total_memory_usage: float = (
-                self.observations.nbytes + self.actions.nbytes + self.rewards.nbytes
-            )
-
-            # Check that the replay buffer can fit into the memory
-            mem_available = psutil.virtual_memory().available
-
-            if total_memory_usage > mem_available:
-                # Convert to GB
-                total_memory_usage /= 1e9
-                mem_available /= 1e9
-                warnings.warn(
-                    "This system does not have apparently enough memory to store the complete "
-                    f"replay buffer {total_memory_usage:.2f}GB > {mem_available:.2f}GB"
-                )
-
-    def add_batch(
-        self,
-        obs: np.ndarray,
-        action: np.ndarray,
-        reward: np.ndarray,
-    ) -> None:
-        batch_size = reward.shape[0]
-        if isinstance(self.observation_space, spaces.Discrete):
-            obs = obs.reshape((batch_size, *self.obs_shape))
-
-        action = action.reshape((batch_size, self.action_dim))
-
-        new_pos = self.pos + batch_size
-        if new_pos > self.buffer_size:
-            indices = np.arange(self.pos, new_pos) % self.buffer_size
-            self.pos = new_pos % self.buffer_size
-        else:
-            indices = slice(self.pos, new_pos)
-            self.pos = new_pos
-
-        if new_pos >= self.buffer_size:
-            self.full = True
-
-        # Copy to avoid modification by reference
-        self.observations[indices] = np.array(obs)
-        self.actions[indices] = np.array(action)
-        self.rewards[indices] = np.array(reward)
-
-    def _get_samples(self, batch_inds: np.ndarray):
-        data = (
-            self.observations[batch_inds, :],
-            self.actions[batch_inds, :],
-            self.rewards[batch_inds],
-        )
-        return tuple(map(self.to_torch, data))
-
-
 dtype_dict = {
     np.bool_       : th.bool,
     np.uint8       : th.uint8,
@@ -717,15 +571,12 @@ class DMCDictBuffer:
     def get_data_indices(self):
         if not self.full:
             indices = np.arange(self.start.min())
+            # print(0, self.start.min(), self.pos, self.start, self.full)
         else:
-            # if np.all(pos >= self.start):
-            #     indices = np.arange(pos, self.start.min() + self.buffer_size) % self.buffer_size
-            # elif np.all(pos < self.start):
-            #     indices = np.arange(pos, self.start.min())
-            # else:
             start = self.pos
             end = np.where(self.pos >= self.start, self.start + self.buffer_size, self.start).min()
             indices = np.arange(start, end) % self.buffer_size
+            # print(start, end, self.pos, self.start, self.full)
         return indices
 
     def _get_samples(self, batch_inds: np.ndarray):

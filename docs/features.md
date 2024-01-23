@@ -22,7 +22,7 @@
 - is_my_turn: 1, int, 0: False, 1: True
 
 ## Action
-- card index: 1, int
+- card index: 4, int, for multi-select
 - msg: 1, int (16)
 - act: 1, int (8)
   - N/A
