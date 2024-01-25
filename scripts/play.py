@@ -27,6 +27,8 @@ class Args:
 
     deck: str = "../deck/OldSchool.ydk"
     """the deck to use"""
+    lang: str = "english"
+    """the language to use"""
     checkpoint: str = "checkpoints/agent.pt"
     """the checkpoint to load"""
     compile: bool = False
@@ -44,7 +46,7 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    glb.init("english")
+    glb.init(args.lang)
     deck = args.deck
     glb.db.init_from_deck(deck)
 
@@ -68,18 +70,13 @@ if __name__ == "__main__":
         state_dict = {k[len(prefix):] if k.startswith(prefix) else k: v for k, v in state_dict.items()}
     agent.load_state_dict(state_dict)
 
-    rewards = []
-    for i in range(100):
-        obs, info = env.reset()
-        done = False
-        while not done:
-            obs = optree.tree_map(lambda x: torch.from_numpy(x).unsqueeze(0).to(device=device), obs)
-            with torch.no_grad():
-                values = agent(obs)
-            
-            action = torch.argmax(values, dim=1).cpu().numpy()[0]
-            next_obs, reward, done, info = env.step(action)
-            obs = next_obs
-        win = 1 if reward == 1 else 0
-        rewards.append(win)
-        print(win, np.mean(rewards))
+    obs, info = env.reset(seed=args.seed)
+    done = False
+    while not done:
+        obs = optree.tree_map(lambda x: torch.from_numpy(x).unsqueeze(0).to(device=device), obs)
+        with torch.no_grad():
+            values = agent(obs)
+        
+        action = torch.argmax(values, dim=1).cpu().numpy()[0]
+        next_obs, reward, done, info = env.step(action)
+        obs = next_obs

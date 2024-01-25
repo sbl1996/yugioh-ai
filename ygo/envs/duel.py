@@ -7,7 +7,6 @@ except ImportError as exc:
 
 from typing import List
 
-import os
 import io
 import struct
 import random
@@ -61,48 +60,48 @@ class Player:
         pass
 
 
-if DUEL_AVAILABLE:
-    @ffi.def_extern()
-    def card_reader_callback(code, data):
-        cd = data[0]
-        row = glb.db.database.execute('select * from datas where id=?', (code,)).fetchone()
-        if row is None:
-            print("Card %d not found in database" % code)
-            raise RuntimeError
-        cd.code = code
-        cd.alias = row['alias']
-        cd.setcode = row['setcode']
-        cd.type = row['type']
-        cd.level = row['level'] & 0xff
-        cd.lscale = (row['level'] >> 24) & 0xff
-        cd.rscale = (row['level'] >> 16) & 0xff
-        cd.attack = row['atk']
-        cd.defense = row['def']
-        if cd.type & TYPE.LINK:
-            cd.link_marker = cd.defense
-            cd.defense = 0
-        else:
-            cd.link_marker = 0
-        cd.race = row['race']
-        cd.attribute = row['attribute']
-        return 0
+# if DUEL_AVAILABLE:
+#     @ffi.def_extern()
+#     def card_reader_callback(code, data):
+#         cd = data[0]
+#         row = glb.db.database.execute('select * from datas where id=?', (code,)).fetchone()
+#         if row is None:
+#             print("Card %d not found in database" % code)
+#             raise RuntimeError
+#         cd.code = code
+#         cd.alias = row['alias']
+#         cd.setcode = row['setcode']
+#         cd.type = row['type']
+#         cd.level = row['level'] & 0xff
+#         cd.lscale = (row['level'] >> 24) & 0xff
+#         cd.rscale = (row['level'] >> 16) & 0xff
+#         cd.attack = row['atk']
+#         cd.defense = row['def']
+#         if cd.type & TYPE.LINK:
+#             cd.link_marker = cd.defense
+#             cd.defense = 0
+#         else:
+#             cd.link_marker = 0
+#         cd.race = row['race']
+#         cd.attribute = row['attribute']
+#         return 0
 
-    lib.set_card_reader(lib.card_reader_callback)
+#     lib.set_card_reader(lib.card_reader_callback)
 
-    scriptbuf = ffi.new('char[131072]')
-    @ffi.def_extern()
-    def script_reader_callback(name, lenptr):
-        fn = ffi.string(name)
-        if not os.path.exists(fn):
-            lenptr[0] = 0
-            return ffi.NULL
-        s = open(fn, 'rb').read()
-        buf = ffi.buffer(scriptbuf)
-        buf[0:len(s)] = s
-        lenptr[0] = len(s)
-        return ffi.cast('byte *', scriptbuf)
+#     scriptbuf = ffi.new('char[131072]')
+#     @ffi.def_extern()
+#     def script_reader_callback(name, lenptr):
+#         fn = ffi.string(name)
+#         if not os.path.exists(fn):
+#             lenptr[0] = 0
+#             return ffi.NULL
+#         s = open(fn, 'rb').read()
+#         buf = ffi.buffer(scriptbuf)
+#         buf[0:len(s)] = s
+#         lenptr[0] = len(s)
+#         return ffi.cast('byte *', scriptbuf)
 
-    lib.set_script_reader(lib.script_reader_callback)
+#     lib.set_script_reader(lib.script_reader_callback)
 
 
 class Duel:

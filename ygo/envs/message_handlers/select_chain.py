@@ -26,7 +26,7 @@ def msg_select_chain(duel: Duel, data):
     if rets is None:
         return data.read()
     else:
-        options, r = select_chain(duel, player, size, spe_count, forced, chains)
+        options, r = rets
         return ActionRequired("select_chain", player, options, r, data.read())
 
 
@@ -66,10 +66,6 @@ def select_chain(duel: Duel, player: int, size, spe_count, forced, chains):
                 pl.notify("%s: %s" % (card.chain_spec, card.get_name()))
             else:
                 pl.notify("%s (%s): %s"%(card.chain_spec, card.get_name(), card.effect_description))
-        # if forced:
-        # 	prompt = pl._("Select card to chain:")
-        # else:
-        # 	prompt = pl._("Select card to chain (c = cancel):")
 
     options = []
     for spec in specs:

@@ -2,7 +2,7 @@ from ygo.envs.glb import register_message
 import io
 
 from ygo.constants import OPCODE
-from ygo.envs.duel import ffi, lib, card_reader_callback, Duel, Decision
+from ygo.envs.duel import Duel, Decision
 from ygo.envs import glb
 
 
@@ -45,10 +45,10 @@ def announce_card(duel: Duel, player: int, options):
 		card = duel.get_card_by_name(pl, caller.text)
 		if card is None:
 			return error(pl._("No results found."))
-		cd = ffi.new('struct card_data *')
-		card_reader_callback(card.code, cd)
-		if not lib.declarable(cd, len(options), options):
-			return error(pl._("Wrong type."))
+		# cd = ffi.new('struct card_data *')
+		# card_reader_callback(card.code, cd)
+		# if not lib.declarable(cd, len(options), options):
+		# 	return error(pl._("Wrong type."))
 		duel.set_responsei(card.code)
 	prompt()
 

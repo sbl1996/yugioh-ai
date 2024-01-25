@@ -166,7 +166,7 @@ class YGOEnv(gym.Env):
                 cards = duel.get_cards_in_location(player, location)
                 for card in cards:
                     # if offset == 94:
-                    #     print(card.location, card.position, card.name)
+                    #     print(player, opponent, card.location, card.position, card.name)
                     seq = card.sequence + 1
                     feat[offset, 0] = glb.db.get_id(card.code)
                     feat[offset, 1] = location2id[card.location]
