@@ -1,5 +1,6 @@
 checkpoints/
 runs/
+logs/
 k8s_job/
 script
 expansions

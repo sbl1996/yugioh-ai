@@ -34,7 +34,7 @@ def select_battlecmd(duel: Duel, pl: Player):
         option = spec + " a"
         specs[option] = c
         options.append(option)
-    if duel.activatable:
+    for c in duel.activatable:
         spec = c.get_spec(pl)
         if duel.verbose:
             pl.notify("%s v: activate %s (%d/%d)" % (spec, c.get_name(), c.attack, c.defense))
