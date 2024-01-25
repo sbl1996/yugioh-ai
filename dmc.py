@@ -59,6 +59,8 @@ class Args:
     """the epsilon for exploration"""
     max_grad_norm: float = 1.0
     """the maximum norm for the gradient clipping"""
+    async_envs: bool = True
+    """if toggled, will use AsyncVectorEnv instead of SyncVectorEnv"""
 
     # to be filled in runtime
     num_iterations: int = 0
@@ -106,7 +108,8 @@ if __name__ == "__main__":
     glb.db.init_from_deck(deck)
 
     # env setup
-    envs = gym.vector.SyncVectorEnv(
+    VectorEnv = gym.vector.AsyncVectorEnv if args.async_envs else gym.vector.SyncVectorEnv
+    envs = VectorEnv(
         [make_env(args.env_id, deck, args.seed + i) for i in range(args.num_envs)]
     )
     obs_space = envs.unwrapped.single_observation_space
