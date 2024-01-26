@@ -1,0 +1,16 @@
+[submodule "third_party/ygopro-core"]
+	path = third_party/ygopro-core
+	url = https://github.com/Fluorohydride/ygopro-core.git
+[submodule "third_party/ygopro-scripts"]
+	path = third_party/ygopro-scripts
+	url = https://github.com/Fluorohydride/ygopro-scripts.git
+[submodule "third_party/pybind11"]
+	path = third_party/pybind11
+	url = https://github.com/pybind/pybind11.git
+	branch = stable
+[submodule "third_party/SQLiteCpp"]
+	path = third_party/SQLiteCpp
+	url = https://github.com/SRombauts/SQLiteCpp.git
+[submodule "third_party/lua-cmake"]
+	path = third_party/lua-cmake
+	url = https://gitlab.com/codelibre/lua/lua-cmake.git
