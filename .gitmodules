@@ -1,6 +1,7 @@
 [submodule "third_party/ygopro-core"]
 	path = third_party/ygopro-core
 	url = https://github.com/Fluorohydride/ygopro-core.git
+	ignore = dirty
 [submodule "third_party/ygopro-scripts"]
 	path = third_party/ygopro-scripts
 	url = https://github.com/Fluorohydride/ygopro-scripts.git
