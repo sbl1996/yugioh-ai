@@ -191,9 +191,12 @@ if __name__ == "__main__":
         train_start = time.time()
         model_time = 0
         sample_time = 0
+
         # ALGO LOGIC: training.
         _start = time.time()
         b_inds = rb.get_data_indices()
+        if len(b_inds) < args.minibatch_size:
+            continue
         np.random.shuffle(b_inds)
         b_obs, b_actions, b_returns = rb._get_samples(b_inds)
         sample_time += time.time() - _start

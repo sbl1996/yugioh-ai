@@ -93,7 +93,9 @@ class GreedyAI(Player):
     def notify(self, arg1, *args, **kwargs):
         if isinstance(arg1, ActionRequired):
             ar = arg1
-            ar.callback(Response(ar.options[0]))
+            chosen = ar.options[0]
+            ar.callback(Response(chosen))
+            return chosen
         elif self.verbose:
             print(self.duel_player, arg1)
 
@@ -143,6 +145,8 @@ class YGOEnv(gym.Env):
 
         self._player = None
         self._action_required: ActionRequired = None
+        self._previous_action_feat = None
+        self._previous_action_cids = np.zeros((self.max_actions,), dtype=np.uint32)
 
     def _set_obs_of_card(self, feat, spec2index, player, opponent):
         duel = self.duel
@@ -195,10 +199,10 @@ class YGOEnv(gym.Env):
         feat[5] = 1 if me == 0 else 0
         feat[6] = me == duel.tp
 
-    def _set_obs_of_action(
-        self, feat, i, msg, spec=None, act=None, yesno=None, phase=None, cancel=None, position=None):
+    def _set_obs_of_action_(
+        self, feat, i, msg, spec=None, act=None, yesno=None, phase=None, cancel=None, position=None, spec2index=None):
         if spec is not None:
-            feat[i, 0] = self._spec2index[spec]
+            feat[i, 0] = spec2index[spec]
         feat[i, 1] = msg2id[msg]
         if act is not None:
             feat[i, 2] = cmd_act2id[act]
@@ -211,6 +215,35 @@ class YGOEnv(gym.Env):
         if position is not None:
             feat[i, 6] = int(position)
 
+    def _set_obs_of_action(self, feat, i, msg, option):
+        if msg == 'idle_action':
+            if option in ['b', 'e']:
+                self._set_obs_of_action_(feat, i, msg, phase=option)
+            else:
+                spec, act = option.split(" ")
+                self._set_obs_of_action_(feat, i, msg, spec=spec, act=act, spec2index=self._spec2index)
+        elif msg == 'select_chain':
+            if option == 'c':
+                self._set_obs_of_action_(feat, i, msg, cancel=option)
+            else:
+                self._set_obs_of_action_(feat, i, msg, spec=option, spec2index=self._spec2index)
+        elif msg == 'select_card' or msg == 'select_tribute':
+            # TODO: Multi-select
+            spec = option.split(" ")[0]
+            self._set_obs_of_action_(feat, i, msg, spec=spec, spec2index=self._spec2index)
+        elif msg == 'select_position':
+            self._set_obs_of_action_(feat, i, msg, position=option)
+        elif msg == 'select_effectyn' or msg == 'yesno':
+            self._set_obs_of_action_(feat, i, msg, yesno=option)
+        elif msg == 'select_battlecmd':
+            if option in ['m', 'e']:
+                self._set_obs_of_action_(feat, i, msg, phase=option)
+            else:
+                spec, act = option.split(" ")
+                self._set_obs_of_action_(feat, i, msg, spec=spec, act=act, spec2index=self._spec2index)
+        else:
+            raise NotImplementedError(f"Unknown message: {msg}")
+
     def _set_obs_of_actions(self, feat):
         ar = self._action_required
         msg = ar.msg
@@ -218,39 +251,8 @@ class YGOEnv(gym.Env):
         if len(options) > self.max_actions:
             print(msg, options)
             options = random.sample(options, self.max_actions)
-        if msg == 'idle_action':
-            for i, option in enumerate(options):
-                if option in ['b', 'e']:
-                    self._set_obs_of_action(feat, i, msg, phase=option)
-                else:
-                    spec, act = option.split(" ")
-                    self._set_obs_of_action(feat, i, msg, spec=spec, act=act)
-        elif msg == 'select_chain':
-            for i, option in enumerate(options):
-                if option == 'c':
-                    self._set_obs_of_action(feat, i, msg, cancel=option)
-                else:
-                    self._set_obs_of_action(feat, i, msg, spec=option)
-        elif msg == 'select_card' or msg == 'select_tribute':
-            # TODO: Multi-select
-            for i, option in enumerate(options):
-                spec = option.split(" ")[0]
-                self._set_obs_of_action(feat, i, msg, spec=spec)
-        elif msg == 'select_position':
-            for i, option in enumerate(options):
-                self._set_obs_of_action(feat, i, msg, position=option)
-        elif msg == 'select_effectyn' or msg == 'yesno':
-            for i, option in enumerate(options):
-                self._set_obs_of_action(feat, i, msg, yesno=option)
-        elif msg == 'select_battlecmd':
-            for i, option in enumerate(options):
-                if option in ['m', 'e']:
-                    self._set_obs_of_action(feat, i, msg, phase=option)
-                else:
-                    spec, act = option.split(" ")
-                    self._set_obs_of_action(feat, i, msg, spec=spec, act=act)
-        else:
-            raise NotImplementedError(f"Unknown message: {msg}")
+        for i, option in enumerate(options):
+            self._set_obs_of_action(feat, i, msg, option)
 
     def _get_obs(self):
         feats = {
@@ -297,6 +299,7 @@ class YGOEnv(gym.Env):
         ]
 
         self._action_required = None
+        self._previous_action_feat = None
         self._res = None
         self._terminated = False
 

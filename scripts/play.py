@@ -25,7 +25,7 @@ class Args:
     env_id: str = "yugioh-ai/YGO-v0"
     """the id of the environment"""
 
-    deck: str = "../deck/OldSchool.ydk"
+    deck: str = "deck/OldSchool.ydk"
     """the deck to use"""
     lang: str = "english"
     """the language to use"""
