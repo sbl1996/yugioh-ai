@@ -143,7 +143,7 @@ def select_sum(duel: Duel, mode, player, val, select_min, select_max, must_selec
         lst = [len(ints) + len(must_select)]
         lst.extend([0] * len(must_select))
         lst.extend(ints)
-        b = bytes(lst)
+        b = bytearray(lst)
         duel.set_responseb(b)
     prompt()
 

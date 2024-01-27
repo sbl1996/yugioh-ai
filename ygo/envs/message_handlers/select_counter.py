@@ -89,8 +89,8 @@ def select_counter(duel: Duel, player: int, countertype, count, cards):
             return error(pl._("Values cannot be greater than counter."))
         if sum(ints) != count:
             return error(pl._("Please specify %d values with a sum of %d.") % (len(cards), count))
-        bytes = struct.pack('h' * len(cards), *ints)
-        duel.set_responseb(bytes)
+        buf = struct.pack('h' * len(cards), *ints)
+        duel.set_responseb(bytearray(memoryview(buf)))
     prompt()
 
 register_message({22: msg_select_counter})

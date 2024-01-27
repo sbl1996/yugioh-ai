@@ -31,7 +31,7 @@ class Args:
     eps: float = 0.0
     """the probability of random action"""
 
-    deck: str = "deck/OldSchool.ydk"
+    deck: str = "../deck/OldSchool.ydk"
     """the deck to use"""
     checkpoint: str = "checkpoints/agent.pt"
     """the checkpoint to load"""

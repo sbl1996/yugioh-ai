@@ -4,7 +4,6 @@ runs/
 logs/
 k8s_job/
 script
-expansions
 locale/*.cdb
 locale/*/*.cdb
 

@@ -36,7 +36,7 @@ def sort_card(duel: Duel, player: int, cards):
         return prompt()
     def r(caller):
         if caller.text == 'c':
-            duel.set_responseb(bytes([255]))
+            duel.set_responseb(bytearray([255]))
             return
         ints = [i - 1 for i in parse_ints(caller.text)]
         if len(ints) != len(cards):
@@ -45,7 +45,7 @@ def sort_card(duel: Duel, player: int, cards):
             return error(pl._("Duplicate values not allowed."))
         if any(i < 0 or i > len(cards) - 1 for i in ints):
             return error(pl._("Please enter values between 1 and %d.") % len(cards))
-        duel.set_responseb(bytes([ints.index(c) for c in range(len(cards))]))
+        duel.set_responseb(bytearray([ints.index(c) for c in range(len(cards))]))
     prompt()
 
 register_message({25: msg_sort_card})

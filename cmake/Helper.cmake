@@ -21,3 +21,28 @@ file(TO_CMAKE_PATH "${target_dir}" target_dir)
         COMMAND ${CMAKE_COMMAND} -E echo "Move ${target_name} to ${install_dir}"
     )
 endfunction()
+
+function(replace_line FILEPATH LINE_NUMBER NEW_LINE)
+    # Use sed to replace the line at the specified line number
+    execute_process(
+        COMMAND sed -i "${LINE_NUMBER}c\\${NEW_LINE}" ${FILEPATH}
+        RESULT_VARIABLE SED_RESULT
+    )
+    if(SED_RESULT)
+        message(FATAL_ERROR "Failed to replace line in ${FILEPATH}.")
+    endif()
+endfunction()
+
+function(check_and_insert FILEPATH LINE_NUMBER CONTENT)
+    execute_process(
+        COMMAND bash -c "sed -n ${LINE_NUMBER}p ${FILEPATH}"
+        OUTPUT_VARIABLE line_content
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT "${line_content}" STREQUAL "${CONTENT}")
+        execute_process(
+            COMMAND bash -c "sed -i '${LINE_NUMBER}i\\${CONTENT}' ${FILEPATH}"
+        )
+        message("Insert line ${LINE_NUMBER} in ${FILEPATH} with '${CONTENT}'")
+    endif()
+endfunction()

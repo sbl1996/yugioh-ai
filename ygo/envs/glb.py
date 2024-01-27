@@ -3,6 +3,7 @@ import os
 from ygo.envs.db import CardDataset
 from ygo.envs.strings import StringsDatabase
 from ygo.utils import get_root_directory
+import ygo.ocgcore as lib
 
 db: CardDataset = None
 strings: StringsDatabase = None
@@ -30,3 +31,5 @@ def init(lang):
     db = CardDataset(database)
     strings = StringsDatabase()
     strings.add(lang, short)
+
+    lib.init(database)

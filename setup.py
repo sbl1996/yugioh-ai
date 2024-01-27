@@ -13,7 +13,6 @@ REQUIRES_PYTHON = '>=3.8.0'
 VERSION = None
 
 REQUIRED = [
-    "cffi",
     "natsort"
 ]
 
@@ -44,8 +43,6 @@ setup(
     python_requires=REQUIRES_PYTHON,
     url=URL,
     packages=find_packages(exclude=('tests',)),
-    setup_requires=['cffi'],
-    cffi_modules=["./duel_build.py:ffibuilder"], # "filename:global"
     install_requires=REQUIRED,
     dependency_links=[],
     license='MIT',

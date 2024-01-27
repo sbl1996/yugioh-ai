@@ -61,6 +61,7 @@ void init(const std::string &path) {
 
 
 PYBIND11_MODULE(ocgcore, m) {
+    m.def("init", &init);
     m.def("create_duel", &create_duel);
     m.def("start_duel", &start_duel);
     m.def("set_player_info", &set_player_info);
@@ -69,15 +70,16 @@ PYBIND11_MODULE(ocgcore, m) {
     m.def("get_message", [](intptr_t pduel, py::array_t<uint8> x) {
         return get_message(pduel, x.mutable_data());
     });
-    m.def("get_message2", [](intptr_t pduel, py::array_t<uint8> x) {
-        byte *buf = x.mutable_data();
-        buf[0] = 1;
-        buf[1] = 0;
-        buf[2] = 23;
-        return 3;
-    });
     m.def("end_duel", &end_duel);
     m.def("set_responsei", &set_responsei);
-    m.def("set_responseb", &set_responseb);
-    m.def("query_field_card", &query_field_card);
+    m.def("set_responseb", [](intptr_t pduel, py::array_t<uint8> buf) {
+        return set_responseb(pduel, buf.mutable_data());
+    });
+    m.def("query_field_card", [](intptr_t pduel, uint8 playerid, uint8 location, uint32 query_flag, py::array_t<uint8> buf, int32 use_cache) {
+        return query_field_card(pduel, playerid, location, query_flag, buf.mutable_data(), use_cache);
+    });
+    m.def("query_card", [](intptr_t pduel, uint8 playerid, uint8 location, uint8 sequence, int32 query_flag, py::array_t<uint8> buf, int32 use_cache) {
+        return query_card(pduel, playerid, location, sequence, query_flag, buf.mutable_data(), use_cache);
+    });
+    m.def("query_field_count", &query_field_count);
 }

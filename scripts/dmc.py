@@ -38,7 +38,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "yugioh-ai/YGO-v0"
     """the id of the environment"""
-    deck: str = "deck/OldSchool.ydk"
+    deck: str = "../deck/OldSchool.ydk"
     """the deck to use"""
 
     total_timesteps: int = 100000000

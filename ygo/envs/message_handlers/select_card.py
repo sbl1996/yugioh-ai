@@ -86,11 +86,12 @@ def select_card(
             raise ValueError("Invalid number of cards.")
         if cds and (min(cds) < 0 or max(cds) > len(cards) - 1):
             raise ValueError("Invalid card index.")
-        buf = bytes([len(cds)])
+        buf = bytearray(1 + len(cds))
+        buf[0] = len(cds)
         tribute_value = 0
-        for i in cds:
+        for k, i in enumerate(cds):
             tribute_value += cards[i].release_param if is_tribute else 0
-            buf += bytes([i])
+            buf[k + 1] = i
         if is_tribute and tribute_value < min_cards:
             raise ValueError("Not enough tributes.")
         duel.set_responseb(buf)

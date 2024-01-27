@@ -68,7 +68,7 @@ def select_unselect_card(duel: Duel, player: int, finishable, cancelable, min, m
             return error(pl._("Invalid command"))
         if c < 1 or c > len(pl.card_list):
             return error(pl._("Number not in range"))
-        buf = bytes([1, c - 1])
+        buf = bytearray([1, c - 1])
         duel.set_responseb(buf)
 
     options = []

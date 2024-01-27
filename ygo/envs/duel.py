@@ -1,20 +1,14 @@
-try:
-    from _duel import ffi, lib
-    DUEL_AVAILABLE = True
-except ImportError as exc:
-    print(exc)
-    DUEL_AVAILABLE = False
-
 from typing import List
 
-import os
 import io
 import struct
 import random
 import re
 
 import natsort
+import numpy as np
 
+import ygo.ocgcore as lib
 from ygo.envs.card import Card
 from ygo.constants import TYPE, LOCATION, POSITION, QUERY, INFORM
 from ygo.envs import glb
@@ -61,53 +55,9 @@ class Player:
         pass
 
 
-if DUEL_AVAILABLE:
-    @ffi.def_extern()
-    def card_reader_callback(code, data):
-        cd = data[0]
-        row = glb.db.database.execute('select * from datas where id=?', (code,)).fetchone()
-        if row is None:
-            print("Card %d not found in database" % code)
-            raise RuntimeError
-        cd.code = code
-        cd.alias = row['alias']
-        cd.setcode = row['setcode']
-        cd.type = row['type']
-        cd.level = row['level'] & 0xff
-        cd.lscale = (row['level'] >> 24) & 0xff
-        cd.rscale = (row['level'] >> 16) & 0xff
-        cd.attack = row['atk']
-        cd.defense = row['def']
-        if cd.type & TYPE.LINK:
-            cd.link_marker = cd.defense
-            cd.defense = 0
-        else:
-            cd.link_marker = 0
-        cd.race = row['race']
-        cd.attribute = row['attribute']
-        return 0
-
-    lib.set_card_reader(lib.card_reader_callback)
-
-    scriptbuf = ffi.new('char[131072]')
-    @ffi.def_extern()
-    def script_reader_callback(name, lenptr):
-        fn = ffi.string(name)
-        if not os.path.exists(fn):
-            lenptr[0] = 0
-            return ffi.NULL
-        s = open(fn, 'rb').read()
-        buf = ffi.buffer(scriptbuf)
-        buf[0:len(s)] = s
-        lenptr[0] = len(s)
-        return ffi.cast('byte *', scriptbuf)
-
-    lib.set_script_reader(lib.script_reader_callback)
-
-
 class Duel:
     def __init__(self, seed=None, verbose=False, np_random=None):
-        self.buf = ffi.new('char[]', 4096)
+        self.buf = np.zeros(4096, dtype=np.uint8)
         self._np_random = np_random
         if seed is None:
             if np_random is None:
@@ -219,8 +169,8 @@ class Duel:
     
     def lib_process(self):
         res = lib.process(self.duel)
-        l = lib.get_message(self.duel, ffi.cast('byte *', self.buf))
-        data = ffi.unpack(self.buf, l)
+        l = lib.get_message(self.duel, self.buf)
+        data = self.buf[:l].tobytes()
         return res, data
 
     def end(self):
@@ -260,15 +210,15 @@ class Duel:
         lib.set_responsei(self.duel, r)
 
     def set_responseb(self, r):
-        buf = ffi.new('char[64]', r)
-        lib.set_responseb(self.duel, ffi.cast('byte *', buf))
+        buf = np.frombuffer(r, dtype=np.uint8)
+        lib.set_responseb(self.duel, buf)
 
     def get_cards_in_location(self, player, location) -> List[Card]:
         cards = []
         # flags = QUERY.CODE | QUERY.POSITION | QUERY.LEVEL | QUERY.RANK | QUERY.ATTACK | QUERY.DEFENSE | QUERY.EQUIP_CARD | QUERY.OVERLAY_CARD | QUERY.COUNTERS | QUERY.LSCALE | QUERY.RSCALE | QUERY.LINK
         flags = 14893875
-        bl = lib.query_field_card(self.duel, player, location.value, flags, ffi.cast('byte *', self.buf), 0)
-        buf = io.BytesIO(ffi.unpack(self.buf, bl))
+        bl = lib.query_field_card(self.duel, player, location.value, flags, self.buf, 0)
+        buf = io.BytesIO(self.buf[:bl])
         while True:
             if buf.tell() == bl:
                 break
@@ -328,10 +278,10 @@ class Duel:
 
     def get_card(self, player, loc, seq) -> Card:
         flags = QUERY.CODE | QUERY.ATTACK | QUERY.DEFENSE | QUERY.POSITION | QUERY.LEVEL | QUERY.RANK | QUERY.LSCALE | QUERY.RSCALE | QUERY.LINK
-        bl = lib.query_card(self.duel, player, loc.value, seq, flags.value, ffi.cast('byte *', self.buf), False)
+        bl = lib.query_card(self.duel, player, loc.value, seq, flags.value, self.buf, False)
         if bl == 0:
             return
-        buf = io.BytesIO(ffi.unpack(self.buf, bl))
+        buf = io.BytesIO(self.buf[:bl])
         f = self.read_u32(buf)
         if f == 4:
             return

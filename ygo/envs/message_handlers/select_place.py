@@ -32,14 +32,14 @@ def select_place(duel: Duel, player: int, count, flag):
 			raise ValueError("Wrong number of values.")
 		if any(value not in specs for value in values):
 			raise ValueError("Invalid cardspec.")
-		resp = b''
-		for value in values:
+		resp = bytearray()
+		for k, value in enumerate(values):
 			l, s = duel.cardspec_to_ls(value)
 			if value.startswith('o'):
 				plr = 1 - player
 			else:
 				plr = player
-			resp += bytes([plr, l, s])
+			resp.extend([plr, l, s])
 		duel.set_responseb(resp)
 	return specs, r
 

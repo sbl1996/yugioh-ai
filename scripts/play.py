@@ -25,7 +25,7 @@ class Args:
     env_id: str = "yugioh-ai/YGO-v0"
     """the id of the environment"""
 
-    deck: str = "deck/OldSchool.ydk"
+    deck: str = "../deck/OldSchool.ydk"
     """the deck to use"""
     lang: str = "english"
     """the language to use"""
@@ -61,14 +61,14 @@ if __name__ == "__main__":
     env = CompatEnv(env)
 
     agent = Agent(128, 2, 2).to(device)
-    state_dict = torch.load(args.checkpoint, map_location=device)
+    # state_dict = torch.load(args.checkpoint, map_location=device)
 
-    if args.compile:
-        agent = torch.compile(agent, mode='reduce-overhead')
-    else:
-        prefix = "_orig_mod."
-        state_dict = {k[len(prefix):] if k.startswith(prefix) else k: v for k, v in state_dict.items()}
-    agent.load_state_dict(state_dict)
+    # if args.compile:
+    #     agent = torch.compile(agent, mode='reduce-overhead')
+    # else:
+    #     prefix = "_orig_mod."
+    #     state_dict = {k[len(prefix):] if k.startswith(prefix) else k: v for k, v in state_dict.items()}
+    # agent.load_state_dict(state_dict)
 
     obs, info = env.reset(seed=args.seed)
     done = False
