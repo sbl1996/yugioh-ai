@@ -325,6 +325,8 @@ class YGOEnv(gym.Env):
             while data:
                 msg = int(data[0])
                 fn = glb.message_map.get(msg, None)
+                if self.verbose:
+                    print(msg, fn)
                 if fn:
                     ret = fn(self.duel, data)
                     if isinstance(ret, ActionRequired):
