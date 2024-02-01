@@ -1,5 +1,7 @@
 import itertools
-import os.path
+from pathlib import Path
+
+from envpool2.ygopro import init_module
 
 
 def check_sum(cards, acc):
@@ -29,7 +31,8 @@ def parse_ints(text):
 
 
 def get_root_directory():
-	return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+	cur = Path(__file__).resolve()
+	return str(cur.parent.parent)
 
 
 def load_deck(fn):
@@ -38,3 +41,19 @@ def load_deck(fn):
         noside = itertools.takewhile(lambda x: "side" not in x, lines)
         deck = [int(line) for line in  noside if line[:-1].isdigit()]
         return deck
+
+
+def extract_deck_name(path):
+	return Path(path).stem
+
+_languages = {
+    "english": "en",
+    "chinese": "zh",
+}
+
+def init_ygopro(lang, deck):
+	short = _languages[lang]
+	db_path = Path(get_root_directory(), 'locale', short, 'cards.cdb')
+	deck_name = Path(deck).stem
+	init_module(str(db_path), {deck_name: deck})
+	return deck_name

@@ -104,9 +104,9 @@ class Agent(nn.Module):
         return self.num_embed(bytes_to_bin(x, self.bin_points, self.bin_intervals))
 
     def forward(self, x):
-        x_cards = x['cards']
-        x_global = x['global']
-        x_actions = x['actions']
+        x_cards = x['cards_']
+        x_global = x['global_']
+        x_actions = x['actions_']
         
         x_cards_1 = x_cards[:, :, :8].long()
         x_id = x_cards_1[:, :, 0]

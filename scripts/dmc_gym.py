@@ -3,7 +3,7 @@ import random
 import time
 from dataclasses import dataclass
 
-import envpool2
+import gymnasium as gym
 import numpy as np
 
 import optree
@@ -16,8 +16,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
-from ygo.utils import init_ygopro
 from ygo.rl.utils import RecordEpisodeStatistics
+from ygo.envs import glb
 from ygo.rl.agent import Agent
 from ygo.rl.buffer import DMCDictBuffer
 
@@ -36,7 +36,7 @@ class Args:
     """if toggled, model will be compiled for better performance"""
 
     # Algorithm specific arguments
-    env_id: str = "YGOPro-v0"
+    env_id: str = "yugioh-ai/YGO-v0"
     """the id of the environment"""
     deck: str = "../deck/OldSchool.ydk"
     """the deck to use"""
@@ -67,6 +67,18 @@ class Args:
     """the number of iterations (computed in runtime)"""
 
 
+def make_env(env_id, deck, seed):
+    def thunk():
+        env = gym.make(
+            env_id,
+            deck1=deck,
+            deck2=deck,
+        )
+        env.action_space.seed(seed)
+        return env
+    return thunk
+
+
 if __name__ == "__main__":
 
     args = tyro.cli(Args)
@@ -91,24 +103,23 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    deck = init_ygopro("english", args.deck)
+    glb.init("english")
+    deck = args.deck
+    glb.db.init_from_deck(deck)
 
     # env setup
-    envs = envpool2.make(
-        task_id=args.env_id,
-        env_type="gymnasium",
-        num_envs=args.num_envs,
-        # num_threads=args.num_threads,
-        seed=args.seed,
-        deck1=deck,
-        deck2=deck,
+    VectorEnv = gym.vector.AsyncVectorEnv if args.async_envs else gym.vector.SyncVectorEnv
+    envs = VectorEnv(
+        [make_env(args.env_id, deck, args.seed + i) for i in range(args.num_envs)]
     )
-    envs.num_envs = args.num_envs
-    obs_space = envs.observation_space
-    action_space = envs.action_space
-    print(f"obs_space={obs_space}, action_space={action_space}")
-
+    obs_space = envs.unwrapped.single_observation_space
+    action_space = envs.unwrapped.single_action_space
     envs = RecordEpisodeStatistics(envs)
+
+    # envs_eval = gym.vector.SyncVectorEnv(
+    #     [make_env(args.env_id, deck, args.seed + i) for i in range(args.num_envs)]
+    # )
+    # envs_eval = RecordEpisodeStatistics(envs_eval)
 
     agent = Agent(128, 2, 2).to(device)
     if args.compile:
@@ -130,8 +141,8 @@ if __name__ == "__main__":
     global_step = 0
     start_time = time.time()
     warmup_steps = 0
-    obs, infos = envs.reset()
-    num_options = infos['num_options']
+    obs, infos = envs.reset(seed=args.seed)
+    action_options = infos['options']
     for iteration in range(1, args.num_iterations + 1):
         model_time = 0
         env_time = 0
@@ -142,7 +153,7 @@ if __name__ == "__main__":
 
             obs = optree.tree_map(lambda x: torch.from_numpy(x).to(device=device), obs)
             if random.random() < args.eps:
-                actions_ = np.random.randint(num_options)
+                actions_ = np.array([random.randint(0, len(action_options[i]) - 1) for i in range(envs.num_envs)])
                 actions = torch.from_numpy(actions_).to(device)
             else:
                 _start = time.time()
@@ -155,21 +166,18 @@ if __name__ == "__main__":
             _start = time.time()
             next_obs, rewards, dones, infos = envs.step(actions_)
             env_time += time.time() - _start
-            num_options = infos['num_options']
+            action_options = infos['options']
 
             rb.add(obs, actions, rewards)
             obs = next_obs
 
             for idx, d in enumerate(dones):
                 if d:
-                    num_options[idx] = 1
-
                     rb.mark_episode(idx, gamma)
 
                     episode_length = infos['l'][idx]
                     episode_reward = infos['r'][idx]
-                    if random.random() < 0.05:
-                        print(f"global_step={global_step}, e_ret={episode_reward}, e_len={episode_length}")
+                    print(f"global_step={global_step}, e_ret={episode_reward}, e_len={episode_length}")
                     writer.add_scalar("charts/episodic_return", episode_reward, global_step)
                     writer.add_scalar("charts/episodic_length", episode_length, global_step)
                     avg_win_rates.append(1 if episode_reward == 1 else 0)

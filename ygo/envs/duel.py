@@ -242,7 +242,6 @@ class Duel:
             card.equip_target = None
 
             if f & QUERY.EQUIP_CARD: # optional
-
                 equip_target = self.read_u32(buf)
                 pl = equip_target & 0xff
                 loc = LOCATION((equip_target >> 8) & 0xff)
@@ -250,9 +249,7 @@ class Duel:
                 card.equip_target = self.get_card(pl, loc, seq)
 
             card.xyz_materials = []
-
             xyz = self.read_u32(buf)
-
             for i in range(xyz):
                 card.xyz_materials.append(Card(self.read_u32(buf)))
 
