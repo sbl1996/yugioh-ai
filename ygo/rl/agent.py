@@ -178,10 +178,12 @@ class Agent(nn.Module):
         ], dim=-1)
         
         mask = x_actions[:, :, 1] == 0
+        valid = x['global_'][:, 7] == 0
+        mask[:, 0] &= valid
         for layer in self.action_net:
             f_actions = layer(f_actions, f_cards, tgt_key_padding_mask=mask)
         f_actions = self.action_norm(f_actions)
         values = self.value_head(f_actions)[..., 0]
         values = torch.tanh(values)
         values = torch.where(mask, torch.full_like(values, -1.01), values)
-        return values
+        return values, valid

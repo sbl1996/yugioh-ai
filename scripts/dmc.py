@@ -45,11 +45,11 @@ class Args:
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 32
+    num_envs: int = 8
     """the number of parallel game environments"""
     num_steps: int = 100
     """the number of steps per env per iteration"""
-    buffer_size: int = 20000
+    buffer_size: int = 4000
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
@@ -59,8 +59,6 @@ class Args:
     """the epsilon for exploration"""
     max_grad_norm: float = 1.0
     """the maximum norm for the gradient clipping"""
-    async_envs: bool = True
-    """if toggled, will use AsyncVectorEnv instead of SyncVectorEnv"""
 
     # to be filled in runtime
     num_iterations: int = 0
@@ -135,6 +133,7 @@ if __name__ == "__main__":
     for iteration in range(1, args.num_iterations + 1):
         model_time = 0
         env_time = 0
+        buffer_time = 0
 
         collect_start = time.time()
         for step in range(args.num_steps):
@@ -147,24 +146,26 @@ if __name__ == "__main__":
             else:
                 _start = time.time()
                 with torch.no_grad():
-                    values = agent(obs)
-                model_time += time.time() - _start
+                    values = agent(obs)[0]
                 actions = torch.argmax(values, dim=1)
                 actions_ = actions.cpu().numpy()
+                model_time += time.time() - _start
 
             _start = time.time()
             next_obs, rewards, dones, infos = envs.step(actions_)
             env_time += time.time() - _start
             num_options = infos['num_options']
 
+            _start = time.time()
             rb.add(obs, actions, rewards)
+            buffer_time += time.time() - _start
             obs = next_obs
 
             for idx, d in enumerate(dones):
                 if d:
-                    num_options[idx] = 1
-
+                    _start = time.time()
                     rb.mark_episode(idx, gamma)
+                    buffer_time += time.time() - _start
 
                     episode_length = infos['l'][idx]
                     episode_reward = infos['r'][idx]
@@ -178,7 +179,7 @@ if __name__ == "__main__":
                         avg_win_rates = []
 
         collect_time = time.time() - collect_start
-        print(f"global_step={global_step}, model_time={model_time}, env_time={env_time}, collect_time={collect_time}")
+        print(f"global_step={global_step}, collect_time={collect_time}, model_time={model_time}, env_time={env_time}, buffer_time={buffer_time}")
 
         train_start = time.time()
         model_time = 0
@@ -203,9 +204,11 @@ if __name__ == "__main__":
             sample_time += time.time() - _start
 
             _start = time.time()
-            outputs = agent(mb_obs)
+            outputs, valid = agent(mb_obs)
             outputs = torch.gather(outputs, 1, mb_actions).squeeze(1)
+            outputs = torch.where(valid, outputs, mb_returns)
             loss = F.mse_loss(mb_returns, outputs)
+            loss = loss * (args.minibatch_size / valid.float().sum())
 
             optimizer.zero_grad()
             loss.backward()
