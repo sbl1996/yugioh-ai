@@ -51,9 +51,9 @@ _languages = {
     "chinese": "zh",
 }
 
-def init_ygopro(lang, deck):
+def init_ygopro(lang, deck, code_list_file):
 	short = _languages[lang]
 	db_path = Path(get_root_directory(), 'locale', short, 'cards.cdb')
 	deck_name = Path(deck).stem
-	init_module(str(db_path), {deck_name: deck})
+	init_module(str(db_path), code_list_file, {deck_name: deck})
 	return deck_name

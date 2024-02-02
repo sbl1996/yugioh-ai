@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import gymnasium as gym
 
@@ -51,3 +52,16 @@ class CompatEnv(gym.Wrapper):
             dones,
             infos,
         )
+    
+
+def split_param_groups(model, regex):
+    embed_params = []
+    other_params = []
+    for name, param in model.named_parameters():
+        if re.search(regex, name):
+            embed_params.append(param)
+        else:
+            other_params.append(param)
+    return [
+        {'params': embed_params}, {'params': other_params}
+    ]

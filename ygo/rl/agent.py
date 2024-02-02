@@ -20,7 +20,7 @@ def make_bin_params(x_max=32000, n_bins=32, sig_bins=24):
 
 class Agent(nn.Module):
 
-    def __init__(self, channels=128, num_card_layers=2, num_action_layers=2, bias=False):
+    def __init__(self, channels=128, num_card_layers=2, num_action_layers=2, embedding_shape=None, bias=False):
         super(Agent, self).__init__()
         c = channels
         self.location_embed = nn.Embedding(9, c)
@@ -28,13 +28,18 @@ class Agent(nn.Module):
 
         linear = lambda in_features, out_features: nn.Linear(in_features, out_features, bias=bias)
 
-        self.id_text_embed = nn.Embedding(110, 1024)
-        self.id_embed = linear(1024, c // 2)
+        if embedding_shape is None:
+            n_embed, embed_dim = 110, 1024
+        else:
+            n_embed, embed_dim = embedding_shape
+            n_embed = 1 + n_embed  # 1 (index 0) for unknown
+        self.id_text_embed = nn.Embedding(n_embed, embed_dim)
+        self.id_text_fc_emb = linear(1024, c // 2)
         self.id_norm = nn.LayerNorm(c // 2, elementwise_affine=False)
 
         c_num = c // 8
         n_bins = 32
-        self.num_embed = nn.Sequential(
+        self.num_fc_emb = nn.Sequential(
             linear(n_bins, c_num),
             nn.ReLU(),
         )
@@ -47,9 +52,9 @@ class Agent(nn.Module):
         self.attribute_embed = nn.Embedding(8, c // 16)
         self.race_embed = nn.Embedding(27, c // 16)
         self.level_embed = nn.Embedding(14, c // 16)
-        self.type_embed = linear(25, c // 16)
-        self.atk_embed = linear(c_num, c // 16)
-        self.def_embed = linear(c_num, c // 16)
+        self.type_fc_emb = linear(25, c // 16)
+        self.atk_fc_emb = linear(c_num, c // 16)
+        self.def_fc_emb = linear(c_num, c // 16)
         self.feat_norm = nn.LayerNorm(c // 2, elementwise_affine=False)
 
         self.na_card_embed = nn.Parameter(torch.randn(1, c))
@@ -63,8 +68,8 @@ class Agent(nn.Module):
 
         self.card_norm = nn.LayerNorm(c, elementwise_affine=False)
 
-        self.lp_embed = linear(c_num, c // 4)
-        self.oppo_lp_embed = linear(c_num, c // 4)
+        self.lp_fc_emb = linear(c_num, c // 4)
+        self.oppo_lp_fc_emb = linear(c_num, c // 4)
         self.phase_embed = nn.Embedding(10, c // 4)
         self.if_first_embed = nn.Embedding(2, c // 8)
         self.is_my_turn_embed = nn.Embedding(2, c // 8)
@@ -76,6 +81,11 @@ class Agent(nn.Module):
             nn.Linear(c, c),
         )
         self.global_norm = nn.LayerNorm(c, elementwise_affine=False)
+
+        self.fusion = nn.Sequential(
+            nn.Linear(c * 2, c),
+            nn.ReLU(),
+        )
 
         self.a_msg_embed = nn.Embedding(16, c // 16 * 3)
         self.a_act_embed = nn.Embedding(8, c // 16)
@@ -100,8 +110,16 @@ class Agent(nn.Module):
             nn.Linear(c // 4, 1),
         )
 
+    def load_embeddings(self, embeddings):
+        weight = self.id_text_embed.weight
+        embeddings = torch.from_numpy(embeddings).to(dtype=weight.dtype, device=weight.device)
+        unknown_embed = embeddings.mean(dim=0, keepdim=True)
+        embeddings = torch.cat([unknown_embed, embeddings], dim=0)
+        weight.data.copy_(embeddings)
+        weight.requires_grad = False
+
     def num_transform(self, x):
-        return self.num_embed(bytes_to_bin(x, self.bin_points, self.bin_intervals))
+        return self.num_fc_emb(bytes_to_bin(x, self.bin_points, self.bin_intervals))
 
     def forward(self, x):
         x_cards = x['cards_']
@@ -111,7 +129,7 @@ class Agent(nn.Module):
         x_cards_1 = x_cards[:, :, :8].long()
         x_id = x_cards_1[:, :, 0]
         x_id = self.id_text_embed(x_id)
-        x_id = self.id_embed(x_id)
+        x_id = self.id_text_fc_emb(x_id)
         x_id = self.id_norm(x_id)
         
         f_location = self.location_embed(x_cards_1[:, :, 1])
@@ -125,10 +143,10 @@ class Agent(nn.Module):
 
         x_cards_2 = x_cards[:, :, 8:].to(torch.float32)
         x_atk = self.num_transform(x_cards_2[:, :, 0:2])
-        x_atk = self.atk_embed(x_atk)
+        x_atk = self.atk_fc_emb(x_atk)
         x_def = self.num_transform(x_cards_2[:, :, 2:4])
-        x_def = self.def_embed(x_def)
-        x_type = self.type_embed(x_cards_2[:, :, 4:])
+        x_def = self.def_fc_emb(x_def)
+        x_type = self.type_fc_emb(x_cards_2[:, :, 4:])
 
         x_feat = torch.cat([
             x_owner, x_position, x_attribute, x_race, x_level, x_atk, x_def, x_type
@@ -146,8 +164,8 @@ class Agent(nn.Module):
         f_cards = self.card_norm(f_cards)
         
         x_global_1 = x_global[:, :4].float()
-        x_g_lp = self.lp_embed(self.num_transform(x_global_1[:, 0:2]))
-        x_g_oppo_lp = self.oppo_lp_embed(self.num_transform(x_global_1[:, 2:4]))
+        x_g_lp = self.lp_fc_emb(self.num_transform(x_global_1[:, 0:2]))
+        x_g_oppo_lp = self.oppo_lp_fc_emb(self.num_transform(x_global_1[:, 2:4]))
 
         x_global_2 = x_global[:, 4:7].long()
         x_g_phase = self.phase_embed(x_global_2[:, 0])
@@ -157,6 +175,9 @@ class Agent(nn.Module):
         x_global = self.global_norm_pre(x_global)
         f_global = self.global_net(x_global)
         f_global = self.global_norm(f_global)
+        
+        # f_cards_global = torch.cat([f_cards, f_global.unsqueeze(1).expand(-1, f_cards.shape[1], -1)], dim=-1)
+        # f_cards = self.fusion(f_cards_global)
 
         f_cards = f_cards + f_global.unsqueeze(1)
 

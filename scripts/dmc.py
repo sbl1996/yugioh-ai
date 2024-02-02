@@ -1,6 +1,7 @@
 import os
 import random
 import time
+from typing import Optional
 from dataclasses import dataclass
 
 import envpool2
@@ -17,7 +18,7 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 from ygo.utils import init_ygopro
-from ygo.rl.utils import RecordEpisodeStatistics
+from ygo.rl.utils import RecordEpisodeStatistics, split_param_groups
 from ygo.rl.agent import Agent
 from ygo.rl.buffer import DMCDictBuffer
 
@@ -32,33 +33,45 @@ class Args:
     """if toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """if toggled, cuda will be enabled by default"""
-    compile: bool = True
-    """if toggled, model will be compiled for better performance"""
 
     # Algorithm specific arguments
     env_id: str = "YGOPro-v0"
     """the id of the environment"""
     deck: str = "../deck/OldSchool.ydk"
     """the deck to use"""
+    code_list_file: str = "code_list.txt"
+    """the code list file for card embeddings"""
+    embedding_file: str = "embeddings_en.npy"
+    """the embedding file for card embeddings"""
+    max_options: int = 24
+    """the maximum number of options"""
 
     total_timesteps: int = 100000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
-    num_envs: int = 8
+    num_envs: int = 64
     """the number of parallel game environments"""
     num_steps: int = 100
     """the number of steps per env per iteration"""
-    buffer_size: int = 4000
+    buffer_size: int = 200000
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
-    minibatch_size: int = 128
+    minibatch_size: int = 256
     """the mini-batch size"""
     eps: float = 0.05
     """the epsilon for exploration"""
     max_grad_norm: float = 1.0
     """the maximum norm for the gradient clipping"""
+
+    compile: bool = True
+    """if toggled, model will be compiled for better performance"""
+    torch_threads: Optional[int] = None
+    """the number of threads to use for torch, defaults to ($OMP_NUM_THREADS or 2) * world_size"""
+    env_threads: Optional[int] = 16
+    """the number of threads to use for envpool, defaults to `num_envs`"""
+
 
     # to be filled in runtime
     num_iterations: int = 0
@@ -70,6 +83,11 @@ if __name__ == "__main__":
     args = tyro.cli(Args)
     args.batch_size = args.num_envs * args.num_steps
     args.num_iterations = args.total_timesteps // args.batch_size
+    args.env_threads = args.env_threads or args.num_envs
+    args.torch_threads = args.torch_threads or int(os.getenv("OMP_NUM_THREADS", "4"))
+
+    torch.set_num_threads(args.torch_threads)
+    torch.set_float32_matmul_precision('high')
 
     timestamp = int(time.time())
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{timestamp}"
@@ -89,17 +107,18 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
 
-    deck = init_ygopro("english", args.deck)
+    deck = init_ygopro("english", args.deck, args.code_list_file)
 
     # env setup
     envs = envpool2.make(
         task_id=args.env_id,
         env_type="gymnasium",
         num_envs=args.num_envs,
-        # num_threads=args.num_threads,
+        num_threads=args.env_threads,
         seed=args.seed,
         deck1=deck,
         deck2=deck,
+        max_options=args.max_options,
     )
     envs.num_envs = args.num_envs
     obs_space = envs.observation_space
@@ -108,10 +127,16 @@ if __name__ == "__main__":
 
     envs = RecordEpisodeStatistics(envs)
 
-    agent = Agent(128, 2, 2).to(device)
+    embeddings = np.load(args.embedding_file)
+
+    agent = Agent(128, 2, 2, embeddings.shape).to(device)
+    agent.load_embeddings(embeddings)
+
     if args.compile:
         agent = torch.compile(agent, mode='reduce-overhead')
-    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
+    param_groups = split_param_groups(agent, r"(fc_emb|embed)")
+    param_groups[0]['lr'] = 3 * args.learning_rate
+    optimizer = optim.Adam(param_groups, lr=args.learning_rate, eps=1e-5)
 
     avg_win_rates = []
 
@@ -167,16 +192,16 @@ if __name__ == "__main__":
                     rb.mark_episode(idx, gamma)
                     buffer_time += time.time() - _start
 
-                    episode_length = infos['l'][idx]
-                    episode_reward = infos['r'][idx]
-                    if random.random() < 0.05:
+                    if random.random() < 0.1:
+                        episode_length = infos['l'][idx]
+                        episode_reward = infos['r'][idx]
                         print(f"global_step={global_step}, e_ret={episode_reward}, e_len={episode_length}")
-                    writer.add_scalar("charts/episodic_return", episode_reward, global_step)
-                    writer.add_scalar("charts/episodic_length", episode_length, global_step)
-                    avg_win_rates.append(1 if episode_reward == 1 else 0)
-                    if len(avg_win_rates) > 100:
-                        writer.add_scalar("charts/avg_win_rate", np.mean(avg_win_rates), global_step)
-                        avg_win_rates = []
+                        writer.add_scalar("charts/episodic_return", episode_reward, global_step)
+                        writer.add_scalar("charts/episodic_length", episode_length, global_step)
+                        avg_win_rates.append(1 if episode_reward == 1 else 0)
+                        if len(avg_win_rates) > 100:
+                            writer.add_scalar("charts/avg_win_rate", np.mean(avg_win_rates), global_step)
+                            avg_win_rates = []
 
         collect_time = time.time() - collect_start
         print(f"global_step={global_step}, collect_time={collect_time}, model_time={model_time}, env_time={env_time}, buffer_time={buffer_time}")
@@ -222,10 +247,10 @@ if __name__ == "__main__":
         writer.add_scalar("losses/value_loss", loss, global_step)
         writer.add_scalar("losses/q_values", outputs.mean().item(), global_step)
 
-        if iteration == 3:
+        if iteration == 10:
             warmup_steps = global_step
             start_time = time.time()
-        if iteration > 3:
+        if iteration > 10:
             SPS = int((global_step - warmup_steps) / (time.time() - start_time))
             print("SPS:", SPS)
             writer.add_scalar("charts/SPS", SPS, global_step)
