@@ -1,3 +1,6 @@
+code_list.txt
+*.npy
+
 .vscode/
 checkpoints/
 runs/

@@ -21,39 +21,8 @@
 - is_first: 1, int, 0: False, 1: True
 - is_my_turn: 1, int, 0: False, 1: True
 
-## History Actions
-- card name+desc: 4, int, id (110)
-- msg: 1, int (16)
-- act: 1, int (8)
-  - N/A
-  - t: Set
-  - r: Reposition
-  - v: Activate
-  - c: Special Summon
-  - s: Summon Face-up Attack
-  - m: Summon Face-down Defense
-  - a: Attack
-- yes/no: 1, int (3)
-  - N/A
-  - Yes
-  - No
-- phase: 1, int (4)
-  - N/A
-  - Battle (b)
-  - Main Phase 2 (m)
-  - End Phase (e)
-- cancel: 1, int (2)
-  - N/A
-  - Cancel
-- position: 1, int (5)
-  - N/A
-  - FACEUP_ATTACK
-  - FACEDOWN_ATTACK
-  - FACEUP_DEFENSE
-  - FACEDOWN_DEFENSE
 
-
-## Legal Actions (max 16)
+## Legal Actions (max 8)
 - card spec index: 4, int, select target
 - msg: 1, int (16)
 - act: 1, int (8)
@@ -77,9 +46,9 @@
 - cancel: 1, int (2)
   - N/A
   - Cancel
-- position: 1, int (5)
-  - N/A
-  - FACEUP_ATTACK
-  - FACEDOWN_ATTACK
-  - FACEUP_DEFENSE
-  - FACEDOWN_DEFENSE
+- position: 1, int , 0: N/A, same as position2str
+
+
+## History Actions
+- card name+desc: 4, int, id (110)
+- same as Legal Actions

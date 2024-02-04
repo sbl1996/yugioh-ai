@@ -15,7 +15,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 
 from ygo.utils import init_ygopro
 from ygo.rl.utils import RecordEpisodeStatistics, split_param_groups
@@ -38,7 +37,7 @@ class Args:
     env_id: str = "YGOPro-v0"
     """the id of the environment"""
     deck: str = "../deck/OldSchool.ydk"
-    """the deck to use"""
+    """the deck file to use"""
     code_list_file: str = "code_list.txt"
     """the code list file for card embeddings"""
     embedding_file: str = "embeddings_en.npy"
@@ -54,11 +53,11 @@ class Args:
     """the number of parallel game environments"""
     num_steps: int = 100
     """the number of steps per env per iteration"""
-    buffer_size: int = 200000
+    buffer_size: int = 100000
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
-    minibatch_size: int = 256
+    minibatch_size: int = 128
     """the mini-batch size"""
     eps: float = 0.05
     """the epsilon for exploration"""
@@ -92,6 +91,7 @@ if __name__ == "__main__":
     timestamp = int(time.time())
     run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{timestamp}"
 
+    from torch.utils.tensorboard import SummaryWriter
     writer = SummaryWriter(f"runs/{run_name}")
     writer.add_text(
         "hyperparameters",
@@ -102,7 +102,10 @@ if __name__ == "__main__":
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    torch.backends.cudnn.deterministic = args.torch_deterministic
+    if args.torch_deterministic:
+        torch.backends.cudnn.deterministic = True
+    else:
+        torch.backends.cudnn.benchmark = True
     torch.set_float32_matmul_precision('high')
 
     device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
@@ -129,7 +132,7 @@ if __name__ == "__main__":
 
     embeddings = np.load(args.embedding_file)
 
-    agent = Agent(128, 2, 2, embeddings.shape).to(device)
+    agent = Agent(128, 2, 2, 0, embeddings.shape, affine=True).to(device)
     agent.load_embeddings(embeddings)
 
     if args.compile:
@@ -255,7 +258,7 @@ if __name__ == "__main__":
             print("SPS:", SPS)
             writer.add_scalar("charts/SPS", SPS, global_step)
 
-        if iteration % 100 == 0:
+        if iteration % 10 == 0:
             save_path = f"checkpoints/agent.pt"
             print(f"Saving model to {save_path}")
             torch.save(agent.state_dict(), save_path)

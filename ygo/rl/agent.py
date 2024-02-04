@@ -20,8 +20,11 @@ def make_bin_params(x_max=32000, n_bins=32, sig_bins=24):
 
 class Agent(nn.Module):
 
-    def __init__(self, channels=128, num_card_layers=2, num_action_layers=2, embedding_shape=None, bias=False):
+    def __init__(self, channels=128, num_card_layers=2, num_action_layers=2,
+                 num_history_action_layers=2, embedding_shape=None, bias=False, affine=False):
         super(Agent, self).__init__()
+        self.num_history_action_layers = num_history_action_layers
+
         c = channels
         self.location_embed = nn.Embedding(9, c)
         self.seq_embed = nn.Embedding(41, c)
@@ -35,7 +38,7 @@ class Agent(nn.Module):
             n_embed = 1 + n_embed  # 1 (index 0) for unknown
         self.id_text_embed = nn.Embedding(n_embed, embed_dim)
         self.id_text_fc_emb = linear(1024, c // 2)
-        self.id_norm = nn.LayerNorm(c // 2, elementwise_affine=False)
+        self.id_norm = nn.LayerNorm(c // 2, elementwise_affine=affine)
 
         c_num = c // 8
         n_bins = 32
@@ -55,7 +58,7 @@ class Agent(nn.Module):
         self.type_fc_emb = linear(25, c // 16)
         self.atk_fc_emb = linear(c_num, c // 16)
         self.def_fc_emb = linear(c_num, c // 16)
-        self.feat_norm = nn.LayerNorm(c // 2, elementwise_affine=False)
+        self.feat_norm = nn.LayerNorm(c // 2, elementwise_affine=affine)
 
         self.na_card_embed = nn.Parameter(torch.randn(1, c))
 
@@ -66,7 +69,7 @@ class Agent(nn.Module):
             for i in range(num_card_layers)
         ])
 
-        self.card_norm = nn.LayerNorm(c, elementwise_affine=False)
+        self.card_norm = nn.LayerNorm(c, elementwise_affine=affine)
 
         self.lp_fc_emb = linear(c_num, c // 4)
         self.oppo_lp_fc_emb = linear(c_num, c // 4)
@@ -74,18 +77,13 @@ class Agent(nn.Module):
         self.if_first_embed = nn.Embedding(2, c // 8)
         self.is_my_turn_embed = nn.Embedding(2, c // 8)
 
-        self.global_norm_pre = nn.LayerNorm(c, elementwise_affine=False)
+        self.global_norm_pre = nn.LayerNorm(c, elementwise_affine=affine)
         self.global_net = nn.Sequential(
             nn.Linear(c, c),
             nn.ReLU(),
             nn.Linear(c, c),
         )
-        self.global_norm = nn.LayerNorm(c, elementwise_affine=False)
-
-        self.fusion = nn.Sequential(
-            nn.Linear(c * 2, c),
-            nn.ReLU(),
-        )
+        self.global_norm = nn.LayerNorm(c, elementwise_affine=affine)
 
         self.a_msg_embed = nn.Embedding(16, c // 16 * 3)
         self.a_act_embed = nn.Embedding(8, c // 16)
@@ -96,41 +94,69 @@ class Agent(nn.Module):
 
         self.a_card_proj = nn.Linear(c, c // 2)
 
+        self.h_card_id_proj = nn.Linear(c // 2, c // 2)
+
+        self.h_action_net = nn.ModuleList([
+            nn.TransformerEncoderLayer(
+                c, num_heads, c * 4, dropout=0.0, batch_first=True, norm_first=True)
+            for i in range(num_history_action_layers)
+        ])
+
         num_heads = max(2, c // 128)
-        self.action_net = nn.ModuleList([
+        self.action_card_net = nn.ModuleList([
             nn.TransformerDecoderLayer(
                 c, num_heads, c * 4, dropout=0.0, batch_first=True, norm_first=True)
             for i in range(num_action_layers)
         ])
 
-        self.action_norm = nn.LayerNorm(c, elementwise_affine=False)
+        self.action_history_net = nn.ModuleList([
+            nn.TransformerDecoderLayer(
+                c, num_heads, c * 4, dropout=0.0, batch_first=True, norm_first=True)
+            for i in range(num_action_layers)
+        ])
+
+        self.action_norm = nn.LayerNorm(c, elementwise_affine=affine)
         self.value_head = nn.Sequential(
             nn.Linear(c, c // 4),
             nn.ReLU(),
             nn.Linear(c // 4, 1),
         )
 
-    def load_embeddings(self, embeddings):
+    def load_embeddings(self, embeddings, freeze=True):
         weight = self.id_text_embed.weight
         embeddings = torch.from_numpy(embeddings).to(dtype=weight.dtype, device=weight.device)
         unknown_embed = embeddings.mean(dim=0, keepdim=True)
         embeddings = torch.cat([unknown_embed, embeddings], dim=0)
         weight.data.copy_(embeddings)
-        weight.requires_grad = False
+        if freeze:
+            weight.requires_grad = False
 
     def num_transform(self, x):
         return self.num_fc_emb(bytes_to_bin(x, self.bin_points, self.bin_intervals))
+
+    def encode_action_(self, x):
+        x_a_msg = self.a_msg_embed(x[:, :, 1])
+        x_a_act = self.a_act_embed(x[:, :, 2])
+        x_a_yesno = self.a_yesno_embed(x[:, :, 3])
+        x_a_phase = self.a_phase_embed(x[:, :, 4])
+        x_a_cancel = self.a_cancel_embed(x[:, :, 5])
+        x_a_position = self.a_position_embed(x[:, :, 6])
+        return x_a_msg, x_a_act, x_a_yesno, x_a_phase, x_a_cancel, x_a_position
+
+    def encode_card_id(self, x):
+        x_id = self.id_text_embed(x)
+        x_id = self.id_text_fc_emb(x_id)
+        x_id = self.id_norm(x_id)
+        return x_id
 
     def forward(self, x):
         x_cards = x['cards_']
         x_global = x['global_']
         x_actions = x['actions_']
+        x_h_actions = x['history_actions_']
         
         x_cards_1 = x_cards[:, :, :8].long()
-        x_id = x_cards_1[:, :, 0]
-        x_id = self.id_text_embed(x_id)
-        x_id = self.id_text_fc_emb(x_id)
-        x_id = self.id_norm(x_id)
+        x_id = self.encode_card_id(x_cards_1[:, :, 0])
         
         f_location = self.location_embed(x_cards_1[:, :, 1])
         f_seq = self.seq_embed(x_cards_1[:, :, 2])
@@ -176,9 +202,6 @@ class Agent(nn.Module):
         f_global = self.global_net(x_global)
         f_global = self.global_norm(f_global)
         
-        # f_cards_global = torch.cat([f_cards, f_global.unsqueeze(1).expand(-1, f_cards.shape[1], -1)], dim=-1)
-        # f_cards = self.fusion(f_cards_global)
-
         f_cards = f_cards + f_global.unsqueeze(1)
 
         x_actions = x_actions.long()
@@ -188,21 +211,29 @@ class Agent(nn.Module):
         f_a_actions = f_cards[B[:, None], x_card_index]
         f_a_actions = self.a_card_proj(f_a_actions)
 
-        x_a_msg = self.a_msg_embed(x_actions[:, :, 1])
-        x_a_act = self.a_act_embed(x_actions[:, :, 2])
-        x_a_yesno = self.a_yesno_embed(x_actions[:, :, 3])
-        x_a_phase = self.a_phase_embed(x_actions[:, :, 4])
-        x_a_cancel = self.a_cancel_embed(x_actions[:, :, 5])
-        x_a_position = self.a_position_embed(x_actions[:, :, 6])
-        f_actions = torch.cat([
-            f_a_actions, x_a_msg, x_a_act, x_a_yesno, x_a_phase, x_a_cancel, x_a_position
-        ], dim=-1)
-        
+        x_a_feats = self.encode_action_(x_actions)
+        f_actions = torch.cat([f_a_actions, *x_a_feats], dim=-1)
+
         mask = x_actions[:, :, 1] == 0
         valid = x['global_'][:, 7] == 0
         mask[:, 0] &= valid
-        for layer in self.action_net:
+        for layer in self.action_card_net:
             f_actions = layer(f_actions, f_cards, tgt_key_padding_mask=mask)
+
+        if self.num_history_action_layers != 0:
+            x_h_actions = x_h_actions.long()
+
+            x_card_id = self.encode_card_id(x_h_actions[:, :, 0])
+            x_card_id = self.h_card_id_proj(x_card_id)
+
+            x_h_a_feats = self.encode_action_(x_h_actions)
+            f_h_actions = torch.cat([x_card_id, *x_h_a_feats], dim=-1)
+            for layer in self.h_action_net:
+                f_h_actions = layer(f_h_actions)
+            
+            for layer in self.action_history_net:
+                f_actions = layer(f_actions, f_h_actions)
+
         f_actions = self.action_norm(f_actions)
         values = self.value_head(f_actions)[..., 0]
         values = torch.tanh(values)
