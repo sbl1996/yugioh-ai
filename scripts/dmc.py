@@ -17,7 +17,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from ygo.utils import init_ygopro
-from ygo.rl.utils import RecordEpisodeStatistics, split_param_groups
+from ygo.rl.utils import RecordEpisodeStatistics
 from ygo.rl.agent import Agent
 from ygo.rl.buffer import DMCDictBuffer
 
@@ -53,11 +53,11 @@ class Args:
     """the number of parallel game environments"""
     num_steps: int = 100
     """the number of steps per env per iteration"""
-    buffer_size: int = 100000
+    buffer_size: int = 200000
     """the replay memory buffer size"""
     gamma: float = 0.99
     """the discount factor gamma"""
-    minibatch_size: int = 128
+    minibatch_size: int = 256
     """the mini-batch size"""
     eps: float = 0.05
     """the epsilon for exploration"""
@@ -68,7 +68,7 @@ class Args:
     """if toggled, model will be compiled for better performance"""
     torch_threads: Optional[int] = None
     """the number of threads to use for torch, defaults to ($OMP_NUM_THREADS or 2) * world_size"""
-    env_threads: Optional[int] = 16
+    env_threads: Optional[int] = 32
     """the number of threads to use for envpool, defaults to `num_envs`"""
 
 
@@ -132,14 +132,12 @@ if __name__ == "__main__":
 
     embeddings = np.load(args.embedding_file)
 
-    agent = Agent(128, 2, 2, 0, embeddings.shape, affine=True).to(device)
+    agent = Agent(128, 2, 2, 0, embeddings.shape).to(device)
     agent.load_embeddings(embeddings)
 
     if args.compile:
         agent = torch.compile(agent, mode='reduce-overhead')
-    param_groups = split_param_groups(agent, r"(fc_emb|embed)")
-    param_groups[0]['lr'] = 3 * args.learning_rate
-    optimizer = optim.Adam(param_groups, lr=args.learning_rate, eps=1e-5)
+    optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     avg_win_rates = []
 
@@ -159,6 +157,7 @@ if __name__ == "__main__":
     obs, infos = envs.reset()
     num_options = infos['num_options']
     for iteration in range(1, args.num_iterations + 1):
+        agent.eval()
         model_time = 0
         env_time = 0
         buffer_time = 0
@@ -209,6 +208,7 @@ if __name__ == "__main__":
         collect_time = time.time() - collect_start
         print(f"global_step={global_step}, collect_time={collect_time}, model_time={model_time}, env_time={env_time}, buffer_time={buffer_time}")
 
+        agent.train()
         train_start = time.time()
         model_time = 0
         sample_time = 0
@@ -258,35 +258,10 @@ if __name__ == "__main__":
             print("SPS:", SPS)
             writer.add_scalar("charts/SPS", SPS, global_step)
 
-        if iteration % 10 == 0:
+        if iteration % 100 == 0:
             save_path = f"checkpoints/agent.pt"
             print(f"Saving model to {save_path}")
             torch.save(agent.state_dict(), save_path)
-
-        #     episode_rewards = []
-        #     episode_lengths = []
-        #     obs_, infos_ = envs_eval.reset(seed=args.seed)
-        #     while True:
-        #         obs_ = optree.tree_map(lambda x: torch.from_numpy(x).to(device=device), obs_)
-        #         with torch.no_grad():
-        #             values = agent(obs_)
-        #         actions = torch.argmax(values, dim=1).cpu().numpy()
-        #         obs_, rewards, dones, infos_ = envs_eval.step(actions)
-
-        #         for idx, d in enumerate(dones):
-        #             if d:
-        #                 episode_length = infos_['l'][idx]
-        #                 episode_reward = infos_['r'][idx]
-        #                 if episode_reward == -1:
-        #                     episode_reward = 0
-
-        #                 episode_lengths.append(episode_length)
-        #                 episode_rewards.append(episode_reward)
-        #                 print(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}")
-        #         if len(episode_lengths) >= 128:
-        #             print(f"avg_length={np.mean(episode_lengths)}, win_rate={np.mean(episode_rewards)}")
-        #             break
-
 
     envs.close()
     writer.close()
