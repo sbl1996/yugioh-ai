@@ -67,7 +67,7 @@ class Args:
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
-    args.env_threads = args.env_threads or args.num_envs
+    args.env_threads = min(args.env_threads or args.num_envs, args.num_envs)
     args.torch_threads = args.torch_threads or int(os.getenv("OMP_NUM_THREADS", "4"))
 
     if args.play:

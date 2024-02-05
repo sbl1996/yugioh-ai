@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
     embeddings = np.load(args.embedding_file)
 
-    agent = Agent(128, 2, 2, 0, embeddings.shape).to(device)
+    agent = Agent(128, 2, 2, 1, embeddings.shape).to(device)
     agent.load_embeddings(embeddings)
 
     if args.compile:
