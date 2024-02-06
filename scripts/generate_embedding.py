@@ -86,7 +86,7 @@ if __name__ == "__main__":
         all_embeddings = np.load(embeddings_file)
     print("Embedding dim:", all_embeddings.shape[1])
 
-    assert len(all_embeddings) == len(code_list), "The number of embeddings does not match the number of cards."
+    assert len(all_embeddings) == len(code_list), f"The number of embeddings({len(all_embeddings)}) does not match the number of cards."
 
     all_codes = set(code_list)
 

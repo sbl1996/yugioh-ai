@@ -33,17 +33,6 @@ class Agent(nn.Module):
 
         linear = lambda in_features, out_features: nn.Linear(in_features, out_features, bias=bias)
 
-        if embedding_shape is None:
-            n_embed, embed_dim = 110, 1024
-        else:
-            n_embed, embed_dim = embedding_shape
-            n_embed = 1 + n_embed  # 1 (index 0) for unknown
-        self.id_embed = nn.Embedding(n_embed, embed_dim)
-
-        self.id_fc_emb = linear(1024, c // 2)
-
-        self.id_norm = nn.LayerNorm(c // 2, elementwise_affine=False)
-
         c_num = c // 8
         n_bins = 32
         self.num_fc = nn.Sequential(
@@ -54,15 +43,27 @@ class Agent(nn.Module):
         self.bin_points = nn.Parameter(bin_points, requires_grad=False)
         self.bin_intervals = nn.Parameter(bin_intervals, requires_grad=False)
 
-        self.owner_embed = nn.Embedding(2, c // 16)
-        self.position_embed = nn.Embedding(9, c // 16)
+        if embedding_shape is None:
+            n_embed, embed_dim = 110, 1024
+        else:
+            n_embed, embed_dim = embedding_shape
+            n_embed = 1 + n_embed  # 1 (index 0) for unknown
+        self.id_embed = nn.Embedding(n_embed, embed_dim)
+
+        self.id_fc_emb = linear(1024, c // 4)
+
+        self.id_norm = nn.LayerNorm(c // 4, elementwise_affine=False)
+
+        self.owner_embed = nn.Embedding(2, c // 16 * 2)
+        self.position_embed = nn.Embedding(9, c // 16 * 2)
+        self.overley_embed = nn.Embedding(2, c // 16)
         self.attribute_embed = nn.Embedding(8, c // 16)
         self.race_embed = nn.Embedding(27, c // 16)
         self.level_embed = nn.Embedding(14, c // 16)
-        self.type_fc_emb = linear(25, c // 16)
+        self.type_fc_emb = linear(25, c // 16 * 2)
         self.atk_fc_emb = linear(c_num, c // 16)
         self.def_fc_emb = linear(c_num, c // 16)
-        self.feat_norm = nn.LayerNorm(c // 2, elementwise_affine=affine)
+        self.feat_norm = nn.LayerNorm(c // 4 * 3, elementwise_affine=affine)
 
         self.na_card_embed = nn.Parameter(torch.randn(1, c) * 0.02, requires_grad=True)
 
@@ -90,12 +91,13 @@ class Agent(nn.Module):
         self.global_norm = nn.LayerNorm(c, elementwise_affine=False)
 
         divisor = 8
-        self.a_msg_embed = nn.Embedding(16, c // divisor * 3)
+        self.a_msg_embed = nn.Embedding(16, c // divisor * 2)
         self.a_act_embed = nn.Embedding(8, c // divisor)
         self.a_yesno_embed = nn.Embedding(3, c // divisor)
         self.a_phase_embed = nn.Embedding(4, c // divisor)
         self.a_cancel_embed = nn.Embedding(2, c // divisor)
         self.a_position_embed = nn.Embedding(5, c // divisor)
+        self.a_option_embed = nn.Embedding(4, c // divisor)
         self.a_feat_norm = nn.LayerNorm(c, elementwise_affine=affine)
 
         self.a_card_norm = nn.LayerNorm(c, elementwise_affine=False)
@@ -163,7 +165,8 @@ class Agent(nn.Module):
         x_a_phase = self.a_phase_embed(x[:, :, 4])
         x_a_cancel = self.a_cancel_embed(x[:, :, 5])
         x_a_position = self.a_position_embed(x[:, :, 6])
-        return x_a_msg, x_a_act, x_a_yesno, x_a_phase, x_a_cancel, x_a_position
+        x_a_option = self.a_option_embed(x[:, :, 7])
+        return x_a_msg, x_a_act, x_a_yesno, x_a_phase, x_a_cancel, x_a_position, x_a_option
 
     def get_action_card_(self, x, f_cards):
         x_card_index = x[:, :, 0]
@@ -180,10 +183,11 @@ class Agent(nn.Module):
     def encode_card_feat1(self, x1):
         x_owner = self.owner_embed(x1[:, :, 3])
         x_position = self.position_embed(x1[:, :, 4])
-        x_attribute = self.attribute_embed(x1[:, :, 5])
-        x_race = self.race_embed(x1[:, :, 6])
-        x_level = self.level_embed(x1[:, :, 7])
-        return x_owner, x_position, x_attribute, x_race, x_level
+        x_overley = self.overley_embed(x1[:, :, 5])
+        x_attribute = self.attribute_embed(x1[:, :, 6])
+        x_race = self.race_embed(x1[:, :, 7])
+        x_level = self.level_embed(x1[:, :, 8])
+        return x_owner, x_position, x_overley, x_attribute, x_race, x_level
     
     def encode_card_feat2(self, x2):
         x_atk = self.num_transform(x2[:, :, 0:2])
@@ -212,8 +216,8 @@ class Agent(nn.Module):
         x_actions = x['actions_']
         x_h_actions = x['history_actions_']
         
-        x_cards_1 = x_cards[:, :, :8].long()
-        x_cards_2 = x_cards[:, :, 8:].to(torch.float32)
+        x_cards_1 = x_cards[:, :, :9].long()
+        x_cards_2 = x_cards[:, :, 9:].to(torch.float32)
 
         x_id = self.encode_card_id(x_cards_1[:, :, 0])
         f_loc = self.loc_norm(self.loc_embed(x_cards_1[:, :, 1]))

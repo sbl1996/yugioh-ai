@@ -1,3 +1,4 @@
+import sys
 import time
 import os
 import random
@@ -168,6 +169,7 @@ if __name__ == "__main__":
 
                 episode_lengths.append(episode_length)
                 episode_rewards.append(episode_reward)
+                sys.stderr.write(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}\n")
                 # print(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}")
         if len(episode_lengths) >= args.num_episodes:
             break

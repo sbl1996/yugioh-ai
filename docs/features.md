@@ -6,6 +6,7 @@
 - seq: 1, int, 0: N/A, 1+: seq in location
 - owner: 1, int, 0: me, 1: oppo (2)
 - position: 1, int, 0: N/A, same as position2str
+- overlay: 1, int, 0: not, 1: xyz material
 - attribute: 1, int, 0: N/A, same as attribute2str[2:]
 - race: 1, int, 0: N/A, same as race2str
 - level: 1, int, 0: N/A
