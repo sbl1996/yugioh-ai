@@ -17,7 +17,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from ygo.utils import init_ygopro
-from ygo.rl.utils import RecordEpisodeStatistics
+from ygo.rl.utils import RecordEpisodeStatistics, Elo
 from ygo.rl.agent import Agent
 from ygo.rl.buffer import DMCDictBuffer
 
@@ -140,6 +140,7 @@ if __name__ == "__main__":
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     avg_win_rates = []
+    elo = Elo()
 
     rb = DMCDictBuffer(
         args.buffer_size,
@@ -197,10 +198,14 @@ if __name__ == "__main__":
                     if random.random() < 0.1:
                         episode_length = infos['l'][idx]
                         episode_reward = infos['r'][idx]
-                        print(f"global_step={global_step}, e_ret={episode_reward}, e_len={episode_length}")
                         writer.add_scalar("charts/episodic_return", episode_reward, global_step)
                         writer.add_scalar("charts/episodic_length", episode_length, global_step)
-                        avg_win_rates.append(1 if episode_reward == 1 else 0)
+                        winner = 0 if episode_reward == 1 else 1
+                        elo.update(winner)
+                        writer.add_scalar("charts/elo_rating", elo.r0, global_step)
+                        print(f"global_step={global_step}, e_ret={episode_reward}, e_len={episode_length}, elo={elo.r0}")
+
+                        avg_win_rates.append(1 - winner)
                         if len(avg_win_rates) > 100:
                             writer.add_scalar("charts/avg_win_rate", np.mean(avg_win_rates), global_step)
                             avg_win_rates = []

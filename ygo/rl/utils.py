@@ -65,3 +65,22 @@ def split_param_groups(model, regex):
     return [
         {'params': embed_params}, {'params': other_params}
     ]
+
+
+class Elo:
+
+    def __init__(self, k = 10, r0 = 1500, r1 = 1500):
+        self.r0 = r0
+        self.r1 = r1
+        self.k = k
+
+    def update(self, winner):
+        diff = self.k * (1 - self.expect_result(self.r0, self.r1))
+        if winner == 1:
+            diff = -diff
+        self.r0 += diff
+        self.r1 -= diff
+
+    def expect_result(self, p0, p1):
+        exp = (p0 - p1) / 400.0
+        return 1 / ((10.0 ** (exp)) + 1)
