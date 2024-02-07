@@ -202,7 +202,7 @@ class Agent(nn.Module):
         x_g_lp = self.lp_fc_emb(self.num_transform(x_global_1[:, 0:2]))
         x_g_oppo_lp = self.oppo_lp_fc_emb(self.num_transform(x_global_1[:, 2:4]))
 
-        x_global_2 = x[:, 4:7].long()
+        x_global_2 = x[:, 4:-1].long()
         x_g_phase = self.phase_embed(x_global_2[:, 0])
         x_g_if_first = self.if_first_embed(x_global_2[:, 1])
         x_g_is_my_turn = self.is_my_turn_embed(x_global_2[:, 2])
@@ -256,7 +256,7 @@ class Agent(nn.Module):
         f_actions = f_a_cards + self.a_feat_norm(x_a_feats)
 
         mask = x_actions[:, :, 1] == 0
-        valid = x['global_'][:, 7] == 0
+        valid = x['global_'][:, -1] == 0
         mask[:, 0] &= valid
         for layer in self.action_card_net:
             f_actions = layer(f_actions, f_cards, tgt_key_padding_mask=mask)

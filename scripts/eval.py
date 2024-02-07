@@ -12,8 +12,6 @@ import optree
 
 import tyro
 
-import torch
-
 from ygo.utils import init_ygopro
 from ygo.rl.utils import RecordEpisodeStatistics
 from ygo.rl.agent import Agent
@@ -38,6 +36,12 @@ class Args:
     """the language to use"""
     max_options: int = 24
     """the maximum number of options"""
+    n_history_actions: int = 8
+    """the number of history actions to use"""
+    play: bool = False
+    """whether to play the game"""
+    selfplay: bool = False
+    """whether to use selfplay"""
 
     num_episodes: int = 1024
     """the number of episodes to run"""
@@ -45,14 +49,16 @@ class Args:
     """the number of parallel game environments"""
     verbose: bool = False
     """whether to print debug information"""
-    play: bool = False
-    """whether to play the game"""
 
     bot_strategy: Literal["random", "greedy"] = "greedy"
     """the strategy to use for the bot if agent is not used"""
 
     agent: bool = False
     """whether to use the agent"""
+    num_layers: int = 2
+    """the number of layers for the agent"""
+    num_channels: int = 128
+    """the number of channels for the agent"""
     checkpoint: str = "checkpoints/agent.pt"
     """the checkpoint to load"""
     embedding_file: str = "embeddings_en.npy"
@@ -82,6 +88,7 @@ if __name__ == "__main__":
     np.random.seed(seed)
 
     if args.agent:
+        import torch
         torch.manual_seed(args.seed)
         torch.backends.cudnn.deterministic = args.torch_deterministic
 
@@ -97,18 +104,22 @@ if __name__ == "__main__":
         env_type="gymnasium",
         num_envs=num_envs,
         num_threads=args.env_threads,
+        seed=seed,
         deck1=deck,
         deck2=deck,
-        seed=seed,
+        player=0,
+        max_options=args.max_options,
+        n_history_actions=args.n_history_actions,
+        play_mode='human' if args.play else ('selfplay' if args.selfplay else 'bot'),
         verbose=args.verbose,
-        play_mode='human' if args.play else 'bot',
     )
     envs.num_envs = num_envs
     envs = RecordEpisodeStatistics(envs)
 
     if args.agent:
         embeddings = np.load(args.embedding_file)
-        agent = Agent(128, 2, 2, 0, embeddings.shape).to(device)
+        L = args.num_layers
+        agent = Agent(args.num_channels, L, L, 1, embeddings.shape).to(device)
         agent = agent.eval()
         state_dict = torch.load(args.checkpoint, map_location=device)
 
@@ -153,6 +164,11 @@ if __name__ == "__main__":
                 actions = np.random.randint(infos['num_options'])
             else:
                 actions = np.zeros(num_envs, dtype=np.int32)
+
+        # for k, v in obs.items():
+        #     print(k, v.tolist())
+        # print(infos)
+        # print(actions)
 
         _start = time.time()
         obs, rewards, dones, infos = envs.step(actions)

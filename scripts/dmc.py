@@ -44,6 +44,15 @@ class Args:
     """the embedding file for card embeddings"""
     max_options: int = 24
     """the maximum number of options"""
+    n_history_actions: int = 8
+    """the number of history actions to use"""
+    play_mode: str = "self"
+    """the play mode, can be combination of 'self', 'bot', 'greedy', like 'self+bot'"""
+
+    num_layers: int = 2
+    """the number of layers for the agent"""
+    num_channels: int = 128
+    """the number of channels for the agent"""
 
     total_timesteps: int = 100000000
     """total timesteps of the experiments"""
@@ -63,6 +72,10 @@ class Args:
     """the epsilon for exploration"""
     max_grad_norm: float = 1.0
     """the maximum norm for the gradient clipping"""
+    log_p: float = 0.1
+    """the probability of logging"""
+    save_freq: int = 100
+    """the saving frequency (in terms of iterations)"""
 
     compile: bool = True
     """if toggled, model will be compiled for better performance"""
@@ -122,6 +135,8 @@ if __name__ == "__main__":
         deck1=deck,
         deck2=deck,
         max_options=args.max_options,
+        n_history_actions=args.n_history_actions,
+        play_mode=args.play_mode,
     )
     envs.num_envs = args.num_envs
     obs_space = envs.observation_space
@@ -132,7 +147,8 @@ if __name__ == "__main__":
 
     embeddings = np.load(args.embedding_file)
 
-    agent = Agent(128, 2, 2, 1, embeddings.shape).to(device)
+    L = args.num_layers
+    agent = Agent(args.num_channels, L, L, 1, embeddings.shape).to(device)
     agent.load_embeddings(embeddings)
 
     if args.compile:
@@ -142,12 +158,14 @@ if __name__ == "__main__":
     avg_win_rates = []
     elo = Elo()
 
+    selfplay = "self" in args.play_mode
     rb = DMCDictBuffer(
         args.buffer_size,
         obs_space,
         action_space,
         device=device,
         n_envs=args.num_envs,
+        selfplay=selfplay,
     )
 
     gamma = np.float32(args.gamma)
@@ -185,7 +203,8 @@ if __name__ == "__main__":
             num_options = infos['num_options']
 
             _start = time.time()
-            rb.add(obs, actions, rewards)
+            to_play = infos['to_play'] if selfplay else None
+            rb.add(obs, actions, rewards, to_play)
             buffer_time += time.time() - _start
             obs = next_obs
 
@@ -195,17 +214,29 @@ if __name__ == "__main__":
                     rb.mark_episode(idx, gamma)
                     buffer_time += time.time() - _start
 
-                    if random.random() < 0.1:
+                    if random.random() < args.log_p:
                         episode_length = infos['l'][idx]
                         episode_reward = infos['r'][idx]
                         writer.add_scalar("charts/episodic_return", episode_reward, global_step)
                         writer.add_scalar("charts/episodic_length", episode_length, global_step)
-                        winner = 0 if episode_reward == 1 else 1
-                        elo.update(winner)
-                        writer.add_scalar("charts/elo_rating", elo.r0, global_step)
+                        if selfplay:
+                            if infos['is_selfplay'][idx]:
+                                # win rate for the first player
+                                pl = 1 if infos['to_play'][idx] == 0 else -1
+                                winner = 0 if episode_reward * pl > 0 else 1
+                                avg_win_rates.append(1 - winner)
+                            else:
+                                # win rate of agent
+                                winner = 0 if episode_reward == 1 else 1
+                                elo.update(winner)
+                                writer.add_scalar("charts/elo_rating", elo.r0, global_step)
+                        else:
+                            winner = 0 if episode_reward == 1 else 1
+                            avg_win_rates.append(1 - winner)
+                            elo.update(winner)
+                            writer.add_scalar("charts/elo_rating", elo.r0, global_step)
                         print(f"global_step={global_step}, e_ret={episode_reward}, e_len={episode_length}, elo={elo.r0}")
 
-                        avg_win_rates.append(1 - winner)
                         if len(avg_win_rates) > 100:
                             writer.add_scalar("charts/avg_win_rate", np.mean(avg_win_rates), global_step)
                             avg_win_rates = []
@@ -263,7 +294,7 @@ if __name__ == "__main__":
             print("SPS:", SPS)
             writer.add_scalar("charts/SPS", SPS, global_step)
 
-        if iteration % 100 == 0:
+        if iteration % args.save_freq == 0:
             save_path = f"checkpoints/agent.pt"
             print(f"Saving model to {save_path}")
             torch.save(agent.state_dict(), save_path)

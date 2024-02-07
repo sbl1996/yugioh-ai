@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import warnings
-from typing import Dict, Tuple, Union, NamedTuple, List, Any
+from typing import Dict, Tuple, Union, NamedTuple, List, Any, Optional
 
 import numpy as np
 import numba
@@ -389,6 +389,23 @@ dtype_dict = {
 
 
 @numba.njit
+def nstep_return_selfplay(rewards, to_play, gamma):
+    returns = np.zeros_like(rewards)
+    R0 = rewards[-1]
+    R1 = -rewards[-1]
+    returns[-1] = R0
+    pl = to_play[-1]
+    for step in np.arange(len(rewards) - 2, -1, -1):
+        if to_play[step] == pl:
+            R0 = gamma * R0 + rewards[step]
+            returns[step] = R0
+        else:
+            R1 = gamma * R1 - rewards[step]
+            returns[step] = R1
+    return returns
+
+
+@numba.njit
 def nstep_return(rewards, gamma):
     returns = np.zeros_like(rewards)
     R = 0.0
@@ -504,10 +521,12 @@ class DMCDictBuffer:
         action_space: spaces.Space,
         device: Union[th.device, str] = "auto",
         n_envs: int = 1,
+        selfplay: bool = False,
     ):
         self.observation_space = observation_space
         self.action_space = action_space
         self.obs_shape = get_obs_shape(observation_space)  # type: ignore[assignment]
+        self.selfplay = selfplay
 
         self.action_dim = get_action_dim(action_space)
         self.n_envs = n_envs
@@ -530,6 +549,9 @@ class DMCDictBuffer:
 
         self.rewards = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
 
+        if self.selfplay:
+            self.to_play = np.zeros((self.buffer_size, self.n_envs), dtype=np.int32)
+
     def size(self) -> int:
         """
         :return: The current size of the buffer
@@ -543,12 +565,15 @@ class DMCDictBuffer:
         obs: th.Tensor,
         action: th.Tensor,
         reward: np.ndarray,
+        to_play: Optional[np.ndarray] = None,
     ) -> None:
         batch_size = reward.shape[0]
         for key in self.observations.keys():
             self.observations[key][self.pos] = obs[key]
         self.actions[self.pos] = action.reshape((batch_size, self.action_dim))
         self.rewards[self.pos] = np.array(reward)
+        if self.selfplay:
+            self.to_play[self.pos] = to_play
 
         self.pos += 1
         if self.pos == self.buffer_size:
@@ -565,7 +590,10 @@ class DMCDictBuffer:
             batch_inds = np.arange(start, pos)
         self.start[env_ind] = pos
 
-        returns = nstep_return(self.rewards[batch_inds, env_ind], gamma)
+        if self.selfplay:
+            returns = nstep_return_selfplay(self.rewards[batch_inds, env_ind], self.to_play[batch_inds, env_ind], gamma)
+        else:
+            returns = nstep_return(self.rewards[batch_inds, env_ind], gamma)
         self.returns[batch_inds, env_ind] = th.from_numpy(returns).to(self.device)
 
     def get_data_indices(self):
