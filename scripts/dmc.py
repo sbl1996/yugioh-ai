@@ -175,6 +175,7 @@ if __name__ == "__main__":
     warmup_steps = 0
     obs, infos = envs.reset()
     num_options = infos['num_options']
+    to_play = infos['to_play'] if selfplay else None
     for iteration in range(1, args.num_iterations + 1):
         agent.eval()
         model_time = 0
@@ -203,10 +204,8 @@ if __name__ == "__main__":
             num_options = infos['num_options']
 
             _start = time.time()
-            to_play = infos['to_play'] if selfplay else None
             rb.add(obs, actions, rewards, to_play)
             buffer_time += time.time() - _start
-            obs = next_obs
 
             for idx, d in enumerate(dones):
                 if d:
@@ -222,7 +221,7 @@ if __name__ == "__main__":
                         if selfplay:
                             if infos['is_selfplay'][idx]:
                                 # win rate for the first player
-                                pl = 1 if infos['to_play'][idx] == 0 else -1
+                                pl = 1 if to_play[idx] == 0 else -1
                                 winner = 0 if episode_reward * pl > 0 else 1
                                 avg_win_rates.append(1 - winner)
                             else:
@@ -240,6 +239,9 @@ if __name__ == "__main__":
                         if len(avg_win_rates) > 100:
                             writer.add_scalar("charts/avg_win_rate", np.mean(avg_win_rates), global_step)
                             avg_win_rates = []
+
+            to_play = infos['to_play'] if selfplay else None
+            obs = next_obs
 
         collect_time = time.time() - collect_start
         print(f"global_step={global_step}, collect_time={collect_time}, model_time={model_time}, env_time={env_time}, buffer_time={buffer_time}")
@@ -279,12 +281,15 @@ if __name__ == "__main__":
             nn.utils.clip_grad_norm_(agent.parameters(), args.max_grad_norm)
             optimizer.step()
             model_time += time.time() - _start
-        
+
         train_time = time.time() - train_start
         print(f"global_step={global_step}, train_time={train_time}, model_time={model_time}, sample_time={sample_time}")
 
-        writer.add_scalar("losses/value_loss", loss, global_step)
+        writer.add_scalar("losses/value_loss", loss.item(), global_step)
         writer.add_scalar("losses/q_values", outputs.mean().item(), global_step)
+
+        if not rb.full or iteration % 10 == 0:
+            torch.cuda.empty_cache()
 
         if iteration == 10:
             warmup_steps = global_step

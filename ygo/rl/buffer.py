@@ -546,11 +546,28 @@ class DMCDictBuffer:
         self.actions = th.zeros(
             (self.buffer_size, self.n_envs, self.action_dim), dtype=dtype_dict[action_space.dtype.type], device=self.device)
         self.returns = th.zeros((self.buffer_size, self.n_envs), dtype=th.float32, device=self.device)
-
         self.rewards = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
 
         if self.selfplay:
             self.to_play = np.zeros((self.buffer_size, self.n_envs), dtype=np.int32)
+
+        self._observations = {
+            key: th.zeros(
+                (self.buffer_size * self.n_envs, *_obs_shape),
+                dtype=dtype_dict[observation_space[key].dtype.type], device=self.device)
+            for key, _obs_shape in self.obs_shape.items()
+        }
+        self._actions = th.zeros(
+            (self.buffer_size * self.n_envs, self.action_dim), dtype=dtype_dict[action_space.dtype.type], device=self.device)
+        self._returns = th.zeros((self.buffer_size * self.n_envs,), dtype=th.float32, device=self.device)
+
+        obs_nbytes = 0
+        for _, obs in self.observations.items():
+            obs_nbytes += obs.nbytes
+
+        total_memory_usage: float = obs_nbytes + self.actions.nbytes + self.rewards.nbytes + self.returns.nbytes
+        total_memory_usage = total_memory_usage / 1e9 * 2
+        print(f"Total gpu memory usage: {total_memory_usage:.2f}GB")
 
     def size(self) -> int:
         """
@@ -608,13 +625,17 @@ class DMCDictBuffer:
         return indices
 
     def _get_samples(self, batch_inds: np.ndarray):
-        obs = {
-            key: obs[batch_inds, :, :].flatten(0, 1) for key, obs in self.observations.items()}
+        l = len(batch_inds) * self.n_envs
+        for key, obs in self.observations.items():
+            _obs = self._observations[key]
+            _obs[:l, :] = obs[batch_inds, :, :].flatten(0, 1)
+        self._actions[:l, :] = self.actions[batch_inds, :, :].reshape(-1, self.action_dim)
+        self._returns[:l] = self.returns[batch_inds, :].reshape(-1)
 
         data = (
-            obs,
-            self.actions[batch_inds, :, :].reshape(-1, self.action_dim),
-            self.returns[batch_inds, :].reshape(-1),
+            {key: _obs[:l] for key, _obs in self._observations.items()},
+            self._actions[:l],
+            self._returns[:l],
         )
         return data
 

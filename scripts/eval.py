@@ -74,12 +74,12 @@ class Args:
 
 if __name__ == "__main__":
     args = tyro.cli(Args)
-    args.env_threads = min(args.env_threads or args.num_envs, args.num_envs)
-    args.torch_threads = args.torch_threads or int(os.getenv("OMP_NUM_THREADS", "4"))
-
     if args.play:
         args.num_envs = 1
         args.verbose = True
+
+    args.env_threads = min(args.env_threads or args.num_envs, args.num_envs)
+    args.torch_threads = args.torch_threads or int(os.getenv("OMP_NUM_THREADS", "4"))
 
     deck = init_ygopro(args.lang, args.deck, args.code_list_file)
 
@@ -107,10 +107,9 @@ if __name__ == "__main__":
         seed=seed,
         deck1=deck,
         deck2=deck,
-        player=0,
         max_options=args.max_options,
         n_history_actions=args.n_history_actions,
-        play_mode='human' if args.play else ('selfplay' if args.selfplay else 'bot'),
+        play_mode='human' if args.play else ('self' if args.selfplay else 'bot'),
         verbose=args.verbose,
     )
     envs.num_envs = num_envs
@@ -178,14 +177,20 @@ if __name__ == "__main__":
 
         for idx, d in enumerate(dones):
             if d:
+                win_reason = infos['win_reason'][idx]
                 episode_length = infos['l'][idx]
                 episode_reward = infos['r'][idx]
-                if episode_reward == -1:
-                    episode_reward = 0
+                if args.selfplay:
+                    pl = 1 if infos['to_play'][idx] == 0 else -1
+                    winner = 0 if episode_reward * pl > 0 else 1
+                    episode_reward = 1 - winner
+                else:
+                    if episode_reward == -1:
+                        episode_reward = 0
 
                 episode_lengths.append(episode_length)
                 episode_rewards.append(episode_reward)
-                sys.stderr.write(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}\n")
+                sys.stderr.write(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}, win_reason={win_reason}\n")
                 # print(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}")
         if len(episode_lengths) >= args.num_episodes:
             break
