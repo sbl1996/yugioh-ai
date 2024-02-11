@@ -1,7 +1,7 @@
 # Features
 
-## Card 
-- name+desc: 1, int, id (110)
+## Card (39)
+- id: 2, uint16 -> 2 uint8, name+desc
 - location: 1, int, 0: N/A, 1+: same as location2str (9)
 - seq: 1, int, 0: N/A, 1+: seq in location
 - owner: 1, int, 0: me, 1: oppo (2)
@@ -21,20 +21,24 @@
 - phase: 1, int, one-hot (10)
 - is_first: 1, int, 0: False, 1: True
 - is_my_turn: 1, int, 0: False, 1: True
+- is_end: 1, int, 0: False, 1: True
 
 
 ## Legal Actions (max 8)
-- card spec index: 4, int, select target
+- spec index: 8, int, select target
 - msg: 1, int (16)
-- act: 1, int (8)
+- act: 1, int (11)
   - N/A
   - t: Set
   - r: Reposition
-  - v: Activate
   - c: Special Summon
   - s: Summon Face-up Attack
   - m: Summon Face-down Defense
   - a: Attack
+  - v: Activate
+  - v2: Activate the second effect
+  - v3: Activate the third effect
+  - v4: Activate the fourth effect
 - yes/no: 1, int (3)
   - N/A
   - Yes
@@ -44,12 +48,20 @@
   - Battle (b)
   - Main Phase 2 (m)
   - End Phase (e)
-- cancel: 1, int (2)
+- cancel_finish: 1, int (3)
   - N/A
   - Cancel
+  - Finish
 - position: 1, int , 0: N/A, same as position2str
+- option: 1, int, 0: N/A
+- place: 1, int (31), 0: N/A,
+  - 1-7: m
+  - 8-15: s
+  - 16-22: om
+  - 23-30: os
+- attribute: 1, int, 0: N/A, same as attribute2id
 
 
 ## History Actions
-- card name+desc: 4, int, id (110)
+- id: 2x4, uint16 -> 2 uint8, name+desc
 - same as Legal Actions

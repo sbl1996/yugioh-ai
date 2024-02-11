@@ -58,7 +58,7 @@ def init_ygopro(lang, deck, code_list_file, preload_tokens=True):
 	decks = {deck_name: deck}
 	if preload_tokens:
 		deck_dir = Path(deck).parent
-		token_deck = deck_dir / "tokens.ydk"
+		token_deck = deck_dir / "_tokens.ydk"
 		if not token_deck.exists():
 			raise FileNotFoundError(f"Token deck not found: {token_deck}")
 		decks["tokens"] = str(token_deck)

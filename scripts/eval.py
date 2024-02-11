@@ -38,6 +38,9 @@ class Args:
     """the maximum number of options"""
     n_history_actions: int = 8
     """the number of history actions to use"""
+
+    player: int = -1
+    """the player to play as, -1 means random, 0 is the first player, 1 is the second player"""
     play: bool = False
     """whether to play the game"""
     selfplay: bool = False
@@ -50,8 +53,10 @@ class Args:
     verbose: bool = False
     """whether to print debug information"""
 
-    bot_strategy: Literal["random", "greedy"] = "greedy"
-    """the strategy to use for the bot if agent is not used"""
+    bot_type: Literal["random", "greedy"] = "greedy"
+    """the type of bot to use"""
+    strategy: Literal["random", "greedy"] = "greedy"
+    """the strategy to use if agent is not used"""
 
     agent: bool = False
     """whether to use the agent"""
@@ -107,9 +112,10 @@ if __name__ == "__main__":
         seed=seed,
         deck1=deck,
         deck2=deck,
+        player=args.player,
         max_options=args.max_options,
         n_history_actions=args.n_history_actions,
-        play_mode='human' if args.play else ('self' if args.selfplay else 'bot'),
+        play_mode='human' if args.play else ('self' if args.selfplay else ('bot' if args.bot_type == "greedy" else "random")),
         verbose=args.verbose,
     )
     envs.num_envs = num_envs
@@ -139,6 +145,7 @@ if __name__ == "__main__":
 
     episode_rewards = []
     episode_lengths = []
+    win_reasons = []
 
     step = 0
     start = time.time()
@@ -159,15 +166,18 @@ if __name__ == "__main__":
             actions = torch.argmax(values, dim=1).cpu().numpy()
             model_time += time.time() - _start
         else:
-            if args.bot_strategy == "random":
+            if args.strategy == "random":
                 actions = np.random.randint(infos['num_options'])
             else:
                 actions = np.zeros(num_envs, dtype=np.int32)
 
         # for k, v in obs.items():
+        #     v = v[0]
+        #     if k == 'cards_':
+        #         v = np.concatenate([np.arange(v.shape[0])[:, None], v], axis=1)
         #     print(k, v.tolist())
         # print(infos)
-        # print(actions)
+        # print(actions[0])
 
         _start = time.time()
         obs, rewards, dones, infos = envs.step(actions)
@@ -190,12 +200,13 @@ if __name__ == "__main__":
 
                 episode_lengths.append(episode_length)
                 episode_rewards.append(episode_reward)
+                win_reasons.append(1 if win_reason == 1 else 0)
                 sys.stderr.write(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}, win_reason={win_reason}\n")
                 # print(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}")
         if len(episode_lengths) >= args.num_episodes:
             break
 
-    print(f"avg_length={np.mean(episode_lengths)}, win_rate={np.mean(episode_rewards)}")
+    print(f"avg_length={np.mean(episode_lengths)}, win_rate={np.mean(episode_rewards)}, win_reason={np.mean(win_reasons)}")
     if not args.play:
         total_time = time.time() - start
         total_steps = (step - start_step) * num_envs

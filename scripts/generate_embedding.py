@@ -2,7 +2,6 @@ import os
 import time
 from dataclasses import dataclass
 
-import pickle
 import numpy as np
 
 import voyageai
@@ -94,6 +93,10 @@ if __name__ == "__main__":
     for code in read_decks(deck_dir):
         if code not in all_codes:
             new_codes.append(code)
+    
+    if new_codes == []:
+        print("No new cards have been added to the database.")
+        exit()
 
     new_texts = read_texts(cards_db, new_codes)
 
