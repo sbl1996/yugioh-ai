@@ -54,13 +54,19 @@ _languages = {
 def init_ygopro(lang, deck, code_list_file, preload_tokens=True):
 	short = _languages[lang]
 	db_path = Path(get_root_directory(), 'locale', short, 'cards.cdb')
-	deck_name = Path(deck).stem
-	decks = {deck_name: deck}
-	if preload_tokens:
+	deck_fp = Path(deck)
+	if deck_fp.is_dir():
+		decks = {f.stem: str(f) for f in deck_fp.glob("*.ydk")}
+		deck_dir = deck_fp
+		deck_name = 'random'
+	else:
+		deck_name = Path(deck).stem
+		decks = {deck_name: deck}
 		deck_dir = Path(deck).parent
+	if preload_tokens:
 		token_deck = deck_dir / "_tokens.ydk"
 		if not token_deck.exists():
 			raise FileNotFoundError(f"Token deck not found: {token_deck}")
-		decks["tokens"] = str(token_deck)
+		decks["_tokens"] = str(token_deck)
 	init_module(str(db_path), code_list_file, decks)
 	return deck_name

@@ -38,6 +38,10 @@ class Args:
     """the id of the environment"""
     deck: str = "../deck/OldSchool.ydk"
     """the deck file to use"""
+    deck1: Optional[str] = None
+    """the deck file for the first player"""
+    deck2: Optional[str] = None
+    """the deck file for the second player"""
     code_list_file: str = "code_list.txt"
     """the code list file for card embeddings"""
     embedding_file: str = "embeddings_en.npy"
@@ -125,6 +129,9 @@ if __name__ == "__main__":
 
     deck = init_ygopro("english", args.deck, args.code_list_file)
 
+    args.deck1 = args.deck1 or deck
+    args.deck2 = args.deck2 or deck
+
     # env setup
     envs = envpool2.make(
         task_id=args.env_id,
@@ -132,8 +139,8 @@ if __name__ == "__main__":
         num_envs=args.num_envs,
         num_threads=args.env_threads,
         seed=args.seed,
-        deck1=deck,
-        deck2=deck,
+        deck1=args.deck1,
+        deck2=args.deck2,
         max_options=args.max_options,
         n_history_actions=args.n_history_actions,
         play_mode=args.play_mode,

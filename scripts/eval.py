@@ -30,6 +30,10 @@ class Args:
     """the id of the environment"""
     deck: str = "../deck/OldSchool.ydk"
     """the deck file to use"""
+    deck1: Optional[str] = None
+    """the deck file for the first player"""
+    deck2: Optional[str] = None
+    """the deck file for the second player"""
     code_list_file: str = "code_list.txt"
     """the code list file for card embeddings"""
     lang: str = "english"
@@ -47,7 +51,7 @@ class Args:
     """whether to use selfplay"""
 
     num_episodes: int = 1024
-    """the number of episodes to run"""
+    """the number of episodes to run""" 
     num_envs: int = 64
     """the number of parallel game environments"""
     verbose: bool = False
@@ -88,6 +92,9 @@ if __name__ == "__main__":
 
     deck = init_ygopro(args.lang, args.deck, args.code_list_file)
 
+    args.deck1 = args.deck1 or deck
+    args.deck2 = args.deck2 or deck
+
     seed = args.seed
     random.seed(seed)
     np.random.seed(seed)
@@ -110,8 +117,8 @@ if __name__ == "__main__":
         num_envs=num_envs,
         num_threads=args.env_threads,
         seed=seed,
-        deck1=deck,
-        deck2=deck,
+        deck1=args.deck1,
+        deck2=args.deck2,
         player=args.player,
         max_options=args.max_options,
         n_history_actions=args.n_history_actions,
@@ -145,6 +152,7 @@ if __name__ == "__main__":
 
     episode_rewards = []
     episode_lengths = []
+    win_rates = []
     win_reasons = []
 
     step = 0
@@ -193,20 +201,23 @@ if __name__ == "__main__":
                 if args.selfplay:
                     pl = 1 if infos['to_play'][idx] == 0 else -1
                     winner = 0 if episode_reward * pl > 0 else 1
-                    episode_reward = 1 - winner
+                    win = 1 - winner
                 else:
                     if episode_reward == -1:
-                        episode_reward = 0
+                        win = 0
+                    else:
+                        win = 1
 
                 episode_lengths.append(episode_length)
                 episode_rewards.append(episode_reward)
+                win_rates.append(win)
                 win_reasons.append(1 if win_reason == 1 else 0)
-                sys.stderr.write(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}, win_reason={win_reason}\n")
+                sys.stderr.write(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}, win={win}, win_reason={win_reason}\n")
                 # print(f"Episode {len(episode_lengths)}: length={episode_length}, reward={episode_reward}")
         if len(episode_lengths) >= args.num_episodes:
             break
 
-    print(f"avg_length={np.mean(episode_lengths)}, win_rate={np.mean(episode_rewards)}, win_reason={np.mean(win_reasons)}")
+    print(f"len={np.mean(episode_lengths)}, reward={np.mean(episode_rewards)}, win_rate={np.mean(win_rates)}, win_reason={np.mean(win_reasons)}")
     if not args.play:
         total_time = time.time() - start
         total_steps = (step - start_step) * num_envs
