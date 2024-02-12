@@ -1,5 +1,7 @@
 # Yugioh AI
 
+(Deprecated, merged into [ygo-agent](https://github.com/sbl1996/ygo-agent))
+
 Yugioh AI uses large language models (LLM) and RL to play Yu-Gi-Oh. It is inspired by [yugioh-ai](https://github.com/melvinzhang/yugioh-ai]) and [yugioh-game](https://github.com/tspivey/yugioh-game), and uses [ygopro-core](https://github.com/Fluorohydride/ygopro-core).
 
 ## Usage
